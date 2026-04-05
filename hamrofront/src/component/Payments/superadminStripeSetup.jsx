@@ -1,9 +1,9 @@
-import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useSuperadminStripeSetupStore } from '../../store/superadminStripeSetupStore';
-import { Alert, AlertDescription } from '../UI/alert';
-import { useSearchParams } from 'react-router-dom';
-import PaymentHistoryPDF from './paymentHistoryPdf';
+import React, { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useSuperadminStripeSetupStore } from "../../store/superadminStripeSetupStore";
+import { Alert, AlertDescription } from "../UI/alert";
+import { useSearchParams } from "react-router-dom";
+import PaymentHistoryPDF from "./paymentHistoryPdf";
 
 const SuperadminStripeSetup = () => {
   const {
@@ -15,25 +15,28 @@ const SuperadminStripeSetup = () => {
     checkStripeStatus,
     handleStripeConnect,
     getFilteredHistory,
+    extendSubscriptionBy7Days,
+    toggleAdminAccess,
   } = useSuperadminStripeSetupStore();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const setupComplete = searchParams.get('setup_complete') === 'true';
-    const returnToDashboard = localStorage.getItem('returnToDashboard') === 'true';
+    const setupComplete = searchParams.get("setup_complete") === "true";
+    const returnToDashboard =
+      localStorage.getItem("returnToDashboard") === "true";
 
     if (setupComplete || returnToDashboard) {
       checkStripeStatus().then(() => {
         if (useSuperadminStripeSetupStore.getState().isConnected) {
-          const role = localStorage.getItem('role');
-          if (role === 'superadmin') {
-            navigate('/superadmin-dashboard');
+          const role = localStorage.getItem("role");
+          if (role === "superadmin") {
+            navigate("/superadmin-dashboard");
           } else {
-            console.error('Invalid role for SuperadminStripeSetup:', role);
-            navigate('/login');
+            console.error("Invalid role for SuperadminStripeSetup:", role);
+            navigate("/login");
           }
-          localStorage.removeItem('returnToDashboard');
+          localStorage.removeItem("returnToDashboard");
         }
       });
     } else {
@@ -41,16 +44,43 @@ const SuperadminStripeSetup = () => {
     }
   }, [checkStripeStatus, navigate]);
 
+  const getStatusClasses = (status) => {
+    switch (status) {
+      case "active":
+        return "bg-green-100 text-green-800";
+      case "extended":
+        return "bg-yellow-100 text-yellow-800";
+      case "expired":
+        return "bg-red-100 text-red-800";
+      default:
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
   const columns = [
-    { label: 'Admin', key: 'admin_username', render: (row) => row.admin_username },
-    { label: 'Subscription Year', key: 'subscription_year' },
-    { label: 'Date', key: 'created_at', render: (row) => new Date(row.created_at).toLocaleDateString() },
-    { label: 'Amount', key: 'amount', render: (row) => `₹${row.amount}` },
-    { label: 'Status', key: 'status', render: (row) => (
-      <span className={`px-3 py-1 rounded-full text-sm ${
-        row.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-      }`}>{row.status}</span>
-    )},
+    {
+      label: "Admin",
+      key: "admin_username",
+      render: (row) => row.admin_username,
+    },
+    { label: "Subscription Year", key: "subscription_year" },
+    {
+      label: "Date",
+      key: "created_at",
+      render: (row) => new Date(row.created_at).toLocaleDateString(),
+    },
+    { label: "Amount", key: "amount", render: (row) => `₹${row.amount}` },
+    {
+      label: "Status",
+      key: "status_display",
+      render: (row) => (
+        <span
+          className={`px-3 py-1 rounded-full text-sm ${getStatusClasses(row.status_display || row.status)}`}
+        >
+          {row.status_display || row.status}
+        </span>
+      ),
+    },
   ];
 
   const filteredHistory = getFilteredHistory();
@@ -59,15 +89,22 @@ const SuperadminStripeSetup = () => {
     <div className="p-8 bg-[#F5F8F6]">
       <div className="max-w-7xl mx-auto space-y-6">
         {error && (
-          <Alert variant="error" className="mb-4 bg-red-50 text-red-900 rounded-xl">
+          <Alert
+            variant="error"
+            className="mb-4 bg-red-50 text-red-900 rounded-xl"
+          >
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
 
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h2 className="text-2xl font-semibold text-[#2C3B2A]">Payment Settings</h2>
-            <p className="text-[#5C7361] mt-1">Manage your payment gateway and view admin subscription payments</p>
+            <h2 className="text-2xl font-semibold text-[#2C3B2A]">
+              Payment Settings
+            </h2>
+            <p className="text-[#5C7361] mt-1">
+              Manage your payment gateway and view admin subscription payments
+            </p>
           </div>
         </div>
 
@@ -79,8 +116,12 @@ const SuperadminStripeSetup = () => {
                   <div className="w-6 h-6 text-[#395917]">✓</div>
                 </div>
                 <div>
-                  <h3 className="text-lg font-medium text-[#2C3B2A]">Payment Gateway Status</h3>
-                  <p className="text-[#5C7361]">Active and ready to process admin subscription payments</p>
+                  <h3 className="text-lg font-medium text-[#2C3B2A]">
+                    Payment Gateway Status
+                  </h3>
+                  <p className="text-[#5C7361]">
+                    Active and ready to process admin subscription payments
+                  </p>
                 </div>
               </div>
 
@@ -110,7 +151,9 @@ const SuperadminStripeSetup = () => {
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#395917]"></div>
                   </div>
                 ) : filteredHistory.length === 0 ? (
-                  <div className="text-center py-8 text-[#5C7361]">No subscription payment history available.</div>
+                  <div className="text-center py-8 text-[#5C7361]">
+                    No subscription payment history available.
+                  </div>
                 ) : (
                   <table className="w-full">
                     <thead>
@@ -139,12 +182,20 @@ const SuperadminStripeSetup = () => {
                             <span className="text-white/50">|</span>
                           </div>
                         </th>
-                        <th className="px-8 py-4 text-left font-medium text-base">Status</th>
+                        <th className="px-8 py-4 text-left font-medium text-base">
+                          Status
+                        </th>
+                        <th className="px-8 py-4 text-left font-medium text-base">
+                          Controls
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-[#E8EFEA]">
                       {filteredHistory.map((payment) => (
-                        <tr key={payment.id} className="hover:bg-[#F5F8F6] transition-colors">
+                        <tr
+                          key={payment.id}
+                          className="hover:bg-[#F5F8F6] transition-colors"
+                        >
                           <td className="px-8 py-5 text-base text-[#2C3B2A] font-medium">
                             {payment.admin_username}
                           </td>
@@ -158,15 +209,21 @@ const SuperadminStripeSetup = () => {
                             ₹{payment.amount}
                           </td>
                           <td className="px-8 py-5">
-                          <span
-                              className={`px-3 py-1 rounded-full text-sm ${
-                                  payment.status === 'active'
-                                      ? 'bg-green-100 text-green-800'
-                                      : 'bg-red-100 text-red-800'
-                              }`}
-                          >
-                              {payment.status}
-                          </span>
+                            <span
+                              className={`px-3 py-1 rounded-full text-sm ${getStatusClasses(payment.status_display || payment.status)}`}
+                            >
+                              {payment.status_display || payment.status}
+                            </span>
+                          </td>
+                          <td className="px-8 py-5 text-sm space-x-2">
+                            <button
+                              onClick={() =>
+                                extendSubscriptionBy7Days(payment.admin)
+                              }
+                              className="px-3 py-1 rounded border border-yellow-500 text-yellow-700 hover:bg-yellow-50"
+                            >
+                              +7 days
+                            </button>
                           </td>
                         </tr>
                       ))}
@@ -177,9 +234,12 @@ const SuperadminStripeSetup = () => {
             </div>
           ) : (
             <div className="text-center py-12">
-              <h3 className="text-xl font-medium text-[#2C3B2A] mb-4">Connect Payment Gateway</h3>
+              <h3 className="text-xl font-medium text-[#2C3B2A] mb-4">
+                Connect Payment Gateway
+              </h3>
               <p className="text-[#5C7361] mb-8 max-w-md mx-auto">
-                Set up your payment gateway to start accepting subscription payments from admins securely.
+                Set up your payment gateway to start accepting subscription
+                payments from admins securely.
               </p>
               <button
                 onClick={handleStripeConnect}

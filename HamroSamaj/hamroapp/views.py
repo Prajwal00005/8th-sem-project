@@ -1,10 +1,10 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status,generics
-from .models import User, Visitor, Payment,Complaint,Room,Post, PostImage, Comment, Vote,OTP,BlogPost,Follow,ChatRoom,Message,ChatRoomName,AdminSubscriptionPayment,SecurityPayment,BlockedUser
+from .models import User, Visitor, Payment,Complaint,Room,Post, PostImage, Comment, Vote,OTP,BlogPost,Follow,ChatRoom,Message,ChatRoomName,AdminSubscriptionPayment,SecurityPayment,BlockedUser,Bill,BillItem
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate, get_user_model
-from .serializers import UserSerializer,VisitorSerializer,PaySerializer,ComplaintSerializer,RoomSerializer,PostSerializer, CommentSerializer, VoteSerializer,BlogPostSerializer,FollowSerializer,ChatRoomSerializer,MessageSerializer,ChatRoomSerializer,MessageSerializer,AdminSubscriptionPaymentSerializer,SecurityPaymentSerializer
+from .serializers import UserSerializer,VisitorSerializer,PaySerializer,ComplaintSerializer,RoomSerializer,PostSerializer, CommentSerializer, VoteSerializer,BlogPostSerializer,FollowSerializer,ChatRoomSerializer,MessageSerializer,ChatRoomSerializer,MessageSerializer,AdminSubscriptionPaymentSerializer,SecurityPaymentSerializer,BillSerializer
 from django.contrib.auth.hashers import make_password
 from .permissions import IsSuperAdmin,IsAdminUser
 from rest_framework.permissions import AllowAny,IsAuthenticated
@@ -462,27 +462,45 @@ def resetPasswordOTP(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def registerVisitor(request):
+    """Register a new visitor.
+
+    - Residents can register visitors for their own apartment.
+    - Security can register walk-in visitors for the apartment they guard
+      (linked to their admin/creator).
     """
-    Register a new visitor (Resident only)
-    """
-    if request.user.role != 'resident':
-        return Response({'error': 'Only residents can register visitors'}, 
-                       status=status.HTTP_403_FORBIDDEN)
-    
+
+    role = getattr(request.user, 'role', None)
+    if role not in ['resident', 'security']:
+        return Response({'error': 'Only residents or security can register visitors'},
+                        status=status.HTTP_403_FORBIDDEN)
+
+    # Determine the resident and unit based on role
+    if role == 'resident':
+        resident = request.user
+        unit = request.user.apartmentName
+    else:  # security
+        resident = getattr(request.user, 'created_by', None)
+        if not resident:
+            return Response({'error': 'Security is not linked to an admin; cannot register visitor.'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        unit = resident.apartmentName
+
     # Create a data dictionary with all required fields
     visitor_data = {
         'name': request.data.get('name'),
+        'address': request.data.get('address'),
+        'phone_number': request.data.get('phone_number'),
         'purpose': request.data.get('purpose'),
         'date': request.data.get('date'),
         'expected_time': request.data.get('expected_time'),
-        'unit': request.user.apartmentName  # Use apartmentName as unit
+        'unit': unit
     }
   
     serializer = VisitorSerializer(data=visitor_data)
     if serializer.is_valid():
         try:
             serializer.save(
-                resident=request.user,
+                resident=resident,
                 status='pending'
             )
             return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -569,6 +587,70 @@ def visitorHistory(request):
     
     serializer = VisitorSerializer(visitors, many=True)
     return Response(serializer.data)
+
+
+# --------- Room helper for security/admin (for bill autosuggest) ---------
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def getApartmentRooms(request):
+    """Return all rooms in the current apartment for admin/security.
+
+    Used for autosuggest in bill management (room number + resident name).
+    """
+    user = request.user
+    if user.role == 'admin':
+        admin = user
+    elif user.role == 'security':
+        admin = getattr(user, 'created_by', None)
+        if not admin:
+            return Response({'error': 'Security is not linked to an admin.'}, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        return Response({'error': 'Only admin or security can view apartment rooms.'}, status=status.HTTP_403_FORBIDDEN)
+
+    rooms = Room.objects.filter(apartment=admin).select_related('resident')
+    data = [
+        {
+            'id': room.id,
+            'room_number': room.room_number,
+            'resident_id': room.resident.id if room.resident else None,
+            'resident_name': room.resident.username if room.resident else None,
+        }
+        for room in rooms
+    ]
+    return Response(data)
+
+
+# --------- Room helper for security/admin (for bill autosuggest) ---------
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def getApartmentRooms(request):
+    """Return all rooms in the current apartment for admin/security.
+
+    Used for autosuggest in bill management (room number + resident name).
+    """
+    user = request.user
+    if user.role == 'admin':
+        admin = user
+    elif user.role == 'security':
+        admin = getattr(user, 'created_by', None)
+        if not admin:
+            return Response({'error': 'Security is not linked to an admin.'}, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        return Response({'error': 'Only admin or security can view apartment rooms.'}, status=status.HTTP_403_FORBIDDEN)
+
+    rooms = Room.objects.filter(apartment=admin).select_related('resident')
+    data = [
+        {
+            'id': room.id,
+            'room_number': room.room_number,
+            'resident_id': room.resident.id if room.resident else None,
+            'resident_name': room.resident.username if room.resident else None,
+        }
+        for room in rooms
+    ]
+    return Response(data)
 
 
 #for payment section
@@ -763,6 +845,125 @@ class PaymentListView(ListAPIView):
             resident__apartmentName=admin.apartmentName, # type: ignore
             status__in=['paid', 'advance']
         ).select_related('resident', 'room', 'admin')
+
+
+# ---------------- Bill management (Security + Resident) ----------------
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def securityBills(request):
+    """Security can list and create bills for rooms in their apartment."""
+    user = request.user
+    if user.role != 'security':
+        return Response({'error': 'Only security can manage bills.'}, status=status.HTTP_403_FORBIDDEN)
+
+    admin = getattr(user, 'created_by', None)
+    if not admin:
+        return Response({'error': 'Security is not linked to an admin.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if request.method == 'GET':
+        bills = Bill.objects.filter(room__apartment=admin).select_related('room', 'resident', 'security')
+        serializer = BillSerializer(bills, many=True)
+        return Response(serializer.data)
+
+    # POST - create bill
+    room_id = request.data.get('room')
+    room_number = request.data.get('room_number')
+
+    try:
+        if room_id:
+            room = Room.objects.get(id=room_id, apartment=admin)
+        elif room_number:
+            room = Room.objects.get(room_number=room_number, apartment=admin)
+        else:
+            return Response({'error': 'room or room_number is required.'}, status=status.HTTP_400_BAD_REQUEST)
+    except Room.DoesNotExist:
+        return Response({'error': 'Room not found for this apartment.'}, status=status.HTTP_404_NOT_FOUND)
+
+    resident = room.resident
+    if not resident:
+        return Response({'error': 'Selected room does not have an assigned resident.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    bill_data = {
+        'room': room.id,
+        'resident': resident.id,
+        'security': user.id,
+        'date': request.data.get('date') or timezone.now().date(),
+        'total_amount': request.data.get('total_amount') or 0,
+        'items': request.data.get('items', []),
+    }
+
+    serializer = BillSerializer(data=bill_data)
+    if serializer.is_valid():
+        bill = serializer.save()
+        return Response(BillSerializer(bill).data, status=status.HTTP_201_CREATED)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def securityBillDetail(request, bill_id):
+    """Retrieve, update or delete a bill (security only)."""
+    user = request.user
+    if user.role != 'security':
+        return Response({'error': 'Only security can manage bills.'}, status=status.HTTP_403_FORBIDDEN)
+
+    admin = getattr(user, 'created_by', None)
+    if not admin:
+        return Response({'error': 'Security is not linked to an admin.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        bill = Bill.objects.select_related('room', 'resident', 'security').get(
+            id=bill_id, room__apartment=admin
+        )
+    except Bill.DoesNotExist:
+        return Response({'error': 'Bill not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        return Response(BillSerializer(bill).data)
+
+    if request.method == 'DELETE':
+        bill.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    # PUT - full update (including items)
+    data = request.data.copy()
+    data.setdefault('room', bill.room.id)
+    data.setdefault('resident', bill.resident.id)
+    data.setdefault('security', user.id)
+    serializer = BillSerializer(bill, data=data)
+    if serializer.is_valid():
+        bill = serializer.save()
+        return Response(BillSerializer(bill).data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def residentBills(request):
+    """List all bills for the logged-in resident."""
+    if request.user.role != 'resident':
+        return Response({'error': 'Only residents can view their bills.'}, status=status.HTTP_403_FORBIDDEN)
+
+    bills = Bill.objects.filter(resident=request.user).select_related('room', 'security')
+    serializer = BillSerializer(bills, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def residentBillDetail(request, bill_id):
+    """Get details of a single bill for the resident."""
+    if request.user.role != 'resident':
+        return Response({'error': 'Only residents can view their bills.'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        bill = Bill.objects.select_related('room', 'security').get(id=bill_id, resident=request.user)
+    except Bill.DoesNotExist:
+        return Response({'error': 'Bill not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    return Response(BillSerializer(bill).data)
 
 
 @api_view(['GET'])
@@ -1233,6 +1434,73 @@ def checkSubscriptionDue(request):
                     'days_until_due': days_until_due,
                     'amount_due': float(payment.admin.subscription_price) if payment.admin.subscription_price is not None else 0.0
                 })
+
+    if user.role == 'admin' and not reminders:
+        return Response({
+            'reminder': 'No subscription payments due within the next 7 days.',
+            'due_date': None,
+            'days_until_due': None
+        }, status=status.HTTP_200_OK)
+
+    if user.role == 'superadmin' and not reminders:
+        return Response({'reminder': 'No subscription payments due within the next 7 days.'}, status=status.HTTP_200_OK)
+
+    return Response(reminders, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsSuperAdmin])
+def extendAdminSubscription(request, admin_id):
+    """Superadmin: give an admin a one-time 7 day grace extension.
+
+    This updates the latest active AdminSubscriptionPayment for that admin
+    by setting its extended_until date.
+    """
+    try:
+        admin = User.objects.get(id=admin_id, role='admin')
+    except User.DoesNotExist:
+        return Response({'error': 'Admin not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    latest_payment = AdminSubscriptionPayment.objects.filter(admin=admin).order_by('-subscription_end_date').first()
+    if not latest_payment or not latest_payment.subscription_end_date:
+        return Response({'error': 'No subscription record with an end date found for this admin.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Prevent stacking multiple 7 day extensions on the same payment
+    if latest_payment.extended_until and latest_payment.extended_until > latest_payment.subscription_end_date:
+        return Response({'error': 'This subscription has already been extended.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    base_end = latest_payment.subscription_end_date
+    latest_payment.extended_until = base_end + timedelta(days=7)
+    latest_payment.save()
+
+    serializer = AdminSubscriptionPaymentSerializer(latest_payment)
+    return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsSuperAdmin])
+def toggleAdminAccess(request, admin_id):
+    """Superadmin: activate/deactivate an admin's ability to log in.
+
+    This uses Django's built-in User.is_active flag.
+    """
+    try:
+        admin = User.objects.get(id=admin_id, role='admin')
+    except User.DoesNotExist:
+        return Response({'error': 'Admin not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    is_active = request.data.get('is_active')
+    if is_active is None:
+        return Response({'error': 'is_active field is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    admin.is_active = bool(is_active)
+    admin.save()
+
+    return Response({
+        'admin_id': admin.id,
+        'username': admin.username,
+        'is_active': admin.is_active
+    }, status=status.HTTP_200_OK)
 
     if not reminders:
         return Response({'reminder': 'No subscription payments due within the next 7 days.'}, status=status.HTTP_200_OK)

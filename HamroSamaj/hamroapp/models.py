@@ -63,6 +63,8 @@ class Visitor(models.Model):
     ]
 
     name = models.CharField(max_length=100)
+    address = models.CharField(max_length=255, null=True, blank=True)
+    phone_number = models.CharField(max_length=20, null=True, blank=True)
     purpose = models.CharField(max_length=200)
     date = models.DateField()
     expected_time = models.TimeField()
@@ -117,6 +119,42 @@ class Payment(models.Model):
         ordering = ['-created_at']
 
 
+class Bill(models.Model):
+    room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name='bills')
+    resident = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='bills',
+        limit_choices_to={'role': 'resident'},
+    )
+    security = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='created_bills',
+        limit_choices_to={'role': 'security'},
+    )
+    date = models.DateField()
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Bill #{self.id} - Room {self.room.room_number} - {self.total_amount}"
+
+
+class BillItem(models.Model):
+    bill = models.ForeignKey(Bill, on_delete=models.CASCADE, related_name='items')
+    name = models.CharField(max_length=100)
+    units = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    rate_per_unit = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.name} - {self.amount}"
+
+
 #Subscription Payment
 
 class AdminSubscriptionPayment(models.Model): #new model
@@ -132,6 +170,11 @@ class AdminSubscriptionPayment(models.Model): #new model
     )
     subscription_year = models.IntegerField(help_text="Year the subscription covers")
     subscription_end_date = models.DateField(null=True, blank=True)
+    # Optional manual 7 day grace extension after the normal end date
+    extended_until = models.DateField(null=True, blank=True)
+
+    # Note: whether an admin can log in is controlled via the built-in
+    # User.is_active flag. This model stores only subscription timing data.
 
     class Meta:
         ordering = ['-created_at']

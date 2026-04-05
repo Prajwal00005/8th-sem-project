@@ -28,6 +28,7 @@ urlpatterns = [
     path('visitors/register/', views.registerVisitor, name='registerVisitor'),
     path('visitors/<int:visitor_id>/status/', views.updateVisitorStatus, name='updateVisitorStatus'),
     path('visitors/history/', views.visitorHistory, name='visitorHistory'),
+    path('rooms/apartment/', views.getApartmentRooms, name='getApartmentRooms'),
     
     path('paymentHome/',views.PaymentListView.as_view(), name='paymentList'),
     path('createPaymentIntent/',views.createPayIntentView.as_view(), name='createPaymentIntent'),
@@ -43,6 +44,8 @@ urlpatterns = [
     path('confirmAdminSubscription/', views.confirmAdminSubscription, name='confirm-admin-subscription'),
     path('adminSubscriptionPayments/', views.getAdminSubscriptionPayments, name='get-admin-subscription-payments'),
     path('checkSubscriptionDue/', views.checkSubscriptionDue, name='check-subscription-due'),
+    path('admins/<int:admin_id>/extendSubscription7Days/', views.extendAdminSubscription, name='extend-admin-subscription-7-days'),
+    path('admins/<int:admin_id>/toggleAccess/', views.toggleAdminAccess, name='toggle-admin-access'),
     path('createSecurityPaymentIntent/', views.CreateSecurityPaymentIntentView.as_view(), name='create-security-payment-intent'),
     path('confirmSecurityPayment/', views.confirmSecurityPayment, name='confirm-security-payment'),
     path('securityPayments/', views.getSecurityPayments, name='get-security-payments'),
@@ -60,6 +63,12 @@ urlpatterns = [
     path('visitors/trends/', views.getVisitorTrends, name='visitor-trends'),
     path('visitors/recent/', views.getRecentVisitors, name='recent-visitors'),
     path('complaints/resident-trends/', views.getResidentComplaintTrends, name='resident-complaint-trends'),
+
+    # Bill management
+    path('bills/security/', views.securityBills, name='security-bills'),
+    path('bills/security/<int:bill_id>/', views.securityBillDetail, name='security-bill-detail'),
+    path('bills/resident/', views.residentBills, name='resident-bills'),
+    path('bills/resident/<int:bill_id>/', views.residentBillDetail, name='resident-bill-detail'),
 
     
     path('posts/', views.get_posts, name='get_posts'),

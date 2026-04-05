@@ -6,6 +6,7 @@ import RentPayment from '../Payments/rentPayment';
 import UserComplaints from '../Complaints/userComplaints';
 import CommunityHub from '../Community/communityHub';
 import VisitorSection from '../Management/visitorManagement';
+import ResidentBillManagement from '../Management/residentBillManagement';
 import ChatSection from '../chat/chatSection';
 import ChartCard from '../UI/chartCard';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
@@ -82,6 +83,7 @@ const ResidentDashboard = () => {
     const sidebarItems = () => [
         { label: 'Dashboard', page: 'dashboard' },
         { label: 'Rent Payment', page: 'rent' },
+        { label: 'Bill Management', page: 'bills' },
         { label: 'Visitors', page: 'visitors' },
         { label: 'Complaints', page: 'complaints' },
         { label: 'Community', page: 'community-hub' },
@@ -94,6 +96,8 @@ const ResidentDashboard = () => {
                 return <ProfilePage />;
             case 'rent':
                 return <RentPayment />;
+            case 'bills':
+                return <ResidentBillManagement />;
             case 'visitors':
                 return <VisitorSection userRole="resident" />;
             case 'complaints':

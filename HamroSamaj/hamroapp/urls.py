@@ -1,0 +1,85 @@
+from django.urls import path
+from . import views
+from django.conf import settings
+from django.conf.urls.static import static
+
+urlpatterns = [
+    path('addAdmin/', views.addAdmin, name='addAdmin'),
+    path('addUsers/', views.addUser, name='addUser'),
+    path('login/', views.loginUser, name='loginUser'),
+    path('adminList/', views.getAdminList, name='adminList'),
+    path('userList/', views.getUserList, name='userList'),
+    path('updateUser/<int:user_id>/', views.updateUser, name='updateUser'),
+    path('deleteUser/<int:user_id>/', views.deleteUser, name='deleteUser'),
+    path('deleteAdmin/<int:admin_id>/', views.deleteAdmin, name='deleteAdmin'),
+    path('updateAdmin/<int:admin_id>/', views.updateAdmin, name='updateAdmin'),
+    path('requestOTP/', views.requestOTP, name='requestOTP'),
+    path('resetPassword/', views.resetPasswordOTP, name='resetPassword'),
+    
+    path('profile/', views.userProfile, name='userProfile'),
+    path('profile/<int:user_id>/', views.userProfile, name='userProfileById'),
+    path('profile/updateProfile/', views.updateProfile, name='updateProfile'),
+    path('profile/updatePassword/', views.updatePassword, name='updatePassword'),
+    path('follow/', views.follow_user, name='followUser'),
+    path('unfollow/', views.unfollow_user, name='unfollowUser'),
+    path('followstatus/<int:user_id>/', views.get_follow_status, name='getFollowStatus'),
+    
+    path('visitors/', views.getVisitors, name='getVisitors'),
+    path('visitors/register/', views.registerVisitor, name='registerVisitor'),
+    path('visitors/<int:visitor_id>/status/', views.updateVisitorStatus, name='updateVisitorStatus'),
+    path('visitors/history/', views.visitorHistory, name='visitorHistory'),
+    
+    path('paymentHome/',views.PaymentListView.as_view(), name='paymentList'),
+    path('createPaymentIntent/',views.createPayIntentView.as_view(), name='createPaymentIntent'),
+    path('rooms/mine/', views.getResidentRoom, name='getResidentRoom'),
+    path('stripe/connect/', views.AdminStripeConnect.as_view(), name='stripeConnect'),
+    path('stripe/connect/complete/', views.StripeConnectComplete.as_view(), name='stripeConnectComplete'),
+    path('residentPayments/', views.getResidentPayments, name='get-resident-payments'),
+    path('confirmPayment/', views.confirmPayment, name='confirm-payment'),
+    path('checkPaymentDue/', views.checkPaymentDue, name='check-payment-due'),
+    path('generatePaymentHistoryPDF/', views.generatePaymentHistoryPDF, name='generate-payment-history-pdf'),
+    path('check-rent-increase/', views.check_rent_increase, name='check-rent-increase'),
+    path('createAdminSubscriptionIntent/', views.CreateAdminSubscriptionIntentView.as_view(), name='create-admin-subscription-intent'),
+    path('confirmAdminSubscription/', views.confirmAdminSubscription, name='confirm-admin-subscription'),
+    path('adminSubscriptionPayments/', views.getAdminSubscriptionPayments, name='get-admin-subscription-payments'),
+    path('checkSubscriptionDue/', views.checkSubscriptionDue, name='check-subscription-due'),
+    path('createSecurityPaymentIntent/', views.CreateSecurityPaymentIntentView.as_view(), name='create-security-payment-intent'),
+    path('confirmSecurityPayment/', views.confirmSecurityPayment, name='confirm-security-payment'),
+    path('securityPayments/', views.getSecurityPayments, name='get-security-payments'),
+    path('checkSecurityPaymentDue/', views.checkSecurityPaymentDue, name='check-security-payment-due'),
+    path('check_salary_increase/', views.check_salary_increase, name='check-salary-increase'),
+    
+    path('complaints/submit/', views.submitComplaint, name='submitComplaint'),
+    path('complaints/list/', views.getComplaints, name='getComplaints'),
+    path('complaints/respond/<int:complaint_id>/', views.respondComplaint, name='respondComplaint'),
+    path('complaints/sentiment/', views.getComplaintSentimentAnalysis, name='getComplaintSentimentAnalysis'),
+    
+    path('complaints/trends/', views.getComplaintTrends, name='complaint-trends'),
+    path('sentiment/trends/', views.getSentimentTrends, name='sentiment-trends'),
+    path('visitors/stats/', views.getVisitorStats, name='visitor-stats'),
+    path('visitors/trends/', views.getVisitorTrends, name='visitor-trends'),
+    path('visitors/recent/', views.getRecentVisitors, name='recent-visitors'),
+    path('complaints/resident-trends/', views.getResidentComplaintTrends, name='resident-complaint-trends'),
+
+    
+    path('posts/', views.get_posts, name='get_posts'),
+    path('posts/create/', views.create_post, name='create_post'),
+    path('posts/<int:post_id>/update/', views.update_post, name='update_post'),
+    path('posts/<int:post_id>/delete/', views.delete_post, name='delete_post'),
+    path('posts/<int:post_id>/comment/', views.create_comment, name='create_comment'),
+    path('posts/<int:post_id>/vote/', views.vote_post, name='vote_post'),
+    
+    path('create-group-chat/', views.createGroupChat.as_view(), name='create-group-chat'),
+    path('chat-rooms/', views.chatRoomList.as_view(), name='chat-room-list'),
+    path('chat-rooms/<int:pk>/', views.chatRoomDetail.as_view(), name='chat-room-detail'),
+    path('create-private-chat/', views.createPrivateChat.as_view(), name='create-private-chat'),
+    path('chat/<int:chat_room_id>/messages/', views.messageList.as_view(), name='message-list'),
+    path('residents/', views.residentList.as_view(), name='resident-list'),
+    path('block-user/', views.blockUser.as_view(), name='block-user'),
+    path('unblock-user/', views.unblockUser.as_view(), name='unblock-user'),
+    
+    path('blogs/', views.get_published_blogs, name='get_published_blogs'),
+    path('blogs/manage/', views.manage_blogs, name='manage_blogs'),
+    path('blogs/<int:blog_id>/', views.blog_detail, name='blog_detail'),
+
+]+ static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

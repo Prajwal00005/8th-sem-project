@@ -69,6 +69,8 @@ urlpatterns = [
     path('bills/security/<int:bill_id>/', views.securityBillDetail, name='security-bill-detail'),
     path('bills/resident/', views.residentBills, name='resident-bills'),
     path('bills/resident/<int:bill_id>/', views.residentBillDetail, name='resident-bill-detail'),
+    path('bills/resident/<int:bill_id>/create-payment-intent/', views.createBillPaymentIntentView.as_view(), name='resident-bill-create-payment-intent'),
+    path('bills/resident/confirm-payment/', views.confirmBillPayment, name='resident-bill-confirm-payment'),
 
     
     path('posts/', views.get_posts, name='get_posts'),

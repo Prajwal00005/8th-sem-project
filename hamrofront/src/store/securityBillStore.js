@@ -1,18 +1,17 @@
-import { create } from 'zustand';
-import api from '../utils/axiosConfig';
+import { create } from "zustand";
+import api from "../utils/axiosConfig";
 
 export const useSecurityBillStore = create((set, get) => ({
   rooms: [],
   bills: [],
   loading: false,
-  error: '',
+  error: "",
   editingBill: null,
   billForm: {
-    room: '',
-    date: '',
-    items: [
-      { name: '', units: '', rate_per_unit: '', amount: '' },
-    ],
+    room: "",
+    date: "",
+    payment_status: "unpaid",
+    items: [{ name: "", units: "", rate_per_unit: "", amount: "" }],
   },
 
   setError: (error) => set({ error }),
@@ -24,9 +23,10 @@ export const useSecurityBillStore = create((set, get) => ({
     set({
       editingBill: null,
       billForm: {
-        room: '',
-        date: '',
-        items: [{ name: '', units: '', rate_per_unit: '', amount: '' }],
+        room: "",
+        date: "",
+        payment_status: "unpaid",
+        items: [{ name: "", units: "", rate_per_unit: "", amount: "" }],
       },
     }),
 
@@ -36,7 +36,7 @@ export const useSecurityBillStore = create((set, get) => ({
         ...state.billForm,
         items: [
           ...state.billForm.items,
-          { name: '', units: '', rate_per_unit: '', amount: '' },
+          { name: "", units: "", rate_per_unit: "", amount: "" },
         ],
       },
     })),
@@ -48,7 +48,7 @@ export const useSecurityBillStore = create((set, get) => ({
       // Auto-calc amount when units and rate_per_unit both provided
       const units = items[index].units;
       const rate = items[index].rate_per_unit;
-      if (units !== '' && rate !== '' && !updates.hasOwnProperty('amount')) {
+      if (units !== "" && rate !== "" && !updates.hasOwnProperty("amount")) {
         const u = parseFloat(units);
         const r = parseFloat(rate);
         if (!isNaN(u) && !isNaN(r)) {
@@ -67,43 +67,41 @@ export const useSecurityBillStore = create((set, get) => ({
     })),
 
   fetchRooms: async () => {
-    set({ loading: true, error: '' });
+    set({ loading: true, error: "" });
     try {
-      const res = await api.get('/api/v1/rooms/apartment/');
+      const res = await api.get("/api/v1/rooms/apartment/");
       set({ rooms: res.data, loading: false });
     } catch (err) {
-      console.error('Failed to fetch rooms', err);
-      set({ error: 'Failed to fetch rooms', loading: false });
+      console.error("Failed to fetch rooms", err);
+      set({ error: "Failed to fetch rooms", loading: false });
     }
   },
 
   fetchBills: async () => {
-    set({ loading: true, error: '' });
+    set({ loading: true, error: "" });
     try {
-      const res = await api.get('/api/v1/bills/security/');
+      const res = await api.get("/api/v1/bills/security/");
       set({ bills: res.data, loading: false });
     } catch (err) {
-      console.error('Failed to fetch bills', err);
-      set({ error: 'Failed to fetch bills', loading: false });
+      console.error("Failed to fetch bills", err);
+      set({ error: "Failed to fetch bills", loading: false });
     }
   },
 
   saveBill: async () => {
     const { billForm, editingBill } = get();
-    set({ loading: true, error: '' });
+    set({ loading: true, error: "" });
 
     try {
       const items = billForm.items
         .filter((i) => i.name)
         .map((i) => ({
           name: i.name,
-          units: i.units === '' ? null : parseFloat(i.units),
+          units: i.units === "" ? null : parseFloat(i.units),
           rate_per_unit:
-            i.rate_per_unit === '' ? null : parseFloat(i.rate_per_unit),
+            i.rate_per_unit === "" ? null : parseFloat(i.rate_per_unit),
           amount:
-            i.amount === '' || i.amount == null
-              ? null
-              : parseFloat(i.amount),
+            i.amount === "" || i.amount == null ? null : parseFloat(i.amount),
         }));
 
       const total_amount = items.reduce(
@@ -114,6 +112,7 @@ export const useSecurityBillStore = create((set, get) => ({
       const payload = {
         room: billForm.room,
         date: billForm.date,
+        payment_status: billForm.payment_status || "unpaid",
         total_amount,
         items,
       };
@@ -121,7 +120,7 @@ export const useSecurityBillStore = create((set, get) => ({
       if (editingBill) {
         await api.put(`/api/v1/bills/security/${editingBill.id}/`, payload);
       } else {
-        await api.post('/api/v1/bills/security/', payload);
+        await api.post("/api/v1/bills/security/", payload);
       }
 
       await get().fetchBills();
@@ -129,8 +128,8 @@ export const useSecurityBillStore = create((set, get) => ({
       set({ loading: false });
       return true;
     } catch (err) {
-      console.error('Failed to save bill', err);
-      set({ error: 'Failed to save bill', loading: false });
+      console.error("Failed to save bill", err);
+      set({ error: "Failed to save bill", loading: false });
       return false;
     }
   },
@@ -141,25 +140,26 @@ export const useSecurityBillStore = create((set, get) => ({
       billForm: {
         room: bill.room,
         date: bill.date,
+        payment_status: bill.payment_status || "unpaid",
         items: bill.items.map((i) => ({
           name: i.name,
-          units: i.units ?? '',
-          rate_per_unit: i.rate_per_unit ?? '',
-          amount: i.amount ?? '',
+          units: i.units ?? "",
+          rate_per_unit: i.rate_per_unit ?? "",
+          amount: i.amount ?? "",
         })),
       },
     });
   },
 
   deleteBill: async (billId) => {
-    set({ loading: true, error: '' });
+    set({ loading: true, error: "" });
     try {
       await api.delete(`/api/v1/bills/security/${billId}/`);
       await get().fetchBills();
       set({ loading: false });
     } catch (err) {
-      console.error('Failed to delete bill', err);
-      set({ error: 'Failed to delete bill', loading: false });
+      console.error("Failed to delete bill", err);
+      set({ error: "Failed to delete bill", loading: false });
     }
   },
 }));

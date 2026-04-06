@@ -136,7 +136,6 @@ const GuardDashboard = () => {
     { label: "Dashboard", page: "dashboard" },
     { label: "Bill Management", page: "bills" },
     { label: "Manage Visitors", page: "visitors" },
-    { label: "Register Visitor", page: "registerVisitor" },
     { label: "Payment Settings", page: "stripeSetup" },
   ];
 
@@ -149,11 +148,10 @@ const GuardDashboard = () => {
       case "bills":
         return <SecurityBillManagement />;
       case "visitors":
-        return <VisitorSection userRole="security" />;
+        // Unified visitor register + manage view for security
+        return <SecurityVisitorRegister />;
       case "stripeSetup":
         return <SecurityStripeSetup />;
-      case "registerVisitor":
-        return <SecurityVisitorRegister />;
       default:
         return (
           <div className="p-8 bg-[#F5F8F6]">

@@ -230,7 +230,7 @@ class BillSerializer(serializers.ModelSerializer):
         model = Bill
         fields = [
             'id', 'room', 'room_number', 'resident', 'resident_name',
-            'security', 'date', 'total_amount', 'items', 'created_at',
+            'security', 'date', 'total_amount', 'payment_status', 'items', 'created_at',
         ]
         read_only_fields = ['created_at', 'room_number', 'resident_name']
 

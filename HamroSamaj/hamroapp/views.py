@@ -966,6 +966,62 @@ def residentBillDetail(request, bill_id):
     return Response(BillSerializer(bill).data)
 
 
+class createBillPaymentIntentView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, bill_id):
+        resident = request.user
+        if resident.role != 'resident':
+            return Response({'error': 'Only residents can pay bills'}, status=status.HTTP_403_FORBIDDEN)
+
+        try:
+            bill = Bill.objects.select_related('room', 'resident').get(id=bill_id, resident=resident)
+        except Bill.DoesNotExist:
+            return Response({'error': 'Bill not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if bill.payment_status == 'paid':
+            return Response({'error': 'Bill is already paid'}, status=status.HTTP_400_BAD_REQUEST)
+
+        room = bill.room
+        admin = room.apartment
+
+        if not admin or not admin.pk:
+            return Response({'error': 'No valid admin found for this apartment'}, status=status.HTTP_404_NOT_FOUND)
+
+        if not admin.stripe_account_id or not admin.stripe_account_active:  # type: ignore
+            return Response({'error': 'Admin has not set up payment processing'}, status=status.HTTP_400_BAD_REQUEST)
+
+        amount = float(bill.total_amount)
+        amount_cents = int(amount * 100)
+
+        try:
+            intent = stripe.PaymentIntent.create(
+                amount=amount_cents,
+                currency='npr',
+                payment_method_types=['card'],
+                transfer_data={'destination': admin.stripe_account_id},  # type: ignore
+                metadata={
+                    'type': 'bill',
+                    'bill_id': bill.id,
+                    'resident_id': resident.id,
+                    'room_number': room.room_number,
+                    'apartment_name': resident.apartmentName,
+                    'admin_id': admin.pk,
+                },
+            )
+        except stripe.StripeError as e:
+            return Response({'error': f'Payment processing error: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(
+            {
+                'clientSecret': intent.client_secret,
+                'paymentIntentId': intent.id,
+                'amount': amount,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def getResidentPayments(request):
@@ -1271,6 +1327,46 @@ def checkPaymentDue(request):
             {'error': f'An unexpected error occurred: {str(e)}'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def confirmBillPayment(request):
+    resident = request.user
+    if resident.role != 'resident':
+        return Response({'error': 'Only residents can confirm bill payments'}, status=status.HTTP_403_FORBIDDEN)
+
+    payment_intent_id = request.data.get('payment_intent_id')
+    bill_id = request.data.get('bill_id')
+
+    if not payment_intent_id or not bill_id:
+        return Response({'error': 'payment_intent_id and bill_id are required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        bill = Bill.objects.select_related('room', 'resident').get(id=bill_id, resident=resident)
+    except Bill.DoesNotExist:
+        return Response({'error': 'Bill not found or not authorized.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if bill.payment_status == 'paid':
+        return Response(BillSerializer(bill).data, status=status.HTTP_200_OK)
+
+    try:
+        intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+        if intent.status == 'succeeded':
+            # Optionally validate that the intent belongs to this bill
+            intent_bill_id = intent.metadata.get('bill_id') if getattr(intent, 'metadata', None) else None
+            if intent_bill_id and int(intent_bill_id) != bill.id:
+                return Response({'error': 'Payment does not match the specified bill.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            bill.payment_status = 'paid'
+            bill.save()
+            return Response(BillSerializer(bill).data, status=status.HTTP_200_OK)
+        else:
+            return Response({'error': 'Payment has not been completed yet.'}, status=status.HTTP_400_BAD_REQUEST)
+    except stripe.StripeError as e:
+        return Response({'error': f'Error verifying payment: {str(e)}'}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({'error': f'Unexpected error: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 User = get_user_model()
 

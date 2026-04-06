@@ -176,6 +176,46 @@ const UserManagement = () => {
     setShowSecurityPayModal(true);
   };
 
+  const openManualRentModal = (user) => {
+    const latestPayment = getLatestPaymentForResident(user.id);
+    let nextFrom = "";
+    if (latestPayment?.period_to) {
+      const d = new Date(latestPayment.period_to);
+      d.setDate(d.getDate() + 1);
+      nextFrom = d.toISOString().split("T")[0];
+    } else {
+      const d = new Date();
+      d.setDate(1);
+      nextFrom = d.toISOString().split("T")[0];
+    }
+
+    setPayUser(user);
+    setPayPeriodFrom(nextFrom);
+    setPayPeriodTo("");
+    setPayError("");
+    setShowPayModal(true);
+  };
+
+  const openManualBillModal = (user) => {
+    setPayUser(user);
+    setPayPeriodFrom("");
+    setPayPeriodTo("");
+    setPayError("");
+    setShowPayModal(true);
+  };
+
+  const openManualSalaryModal = (user) => {
+    const latest = getLatestSecurityPayment(user.id);
+    const currentYear = new Date().getFullYear();
+    const nextYear = latest?.payment_year
+      ? latest.payment_year + 1
+      : currentYear;
+    setSecurityUser(user);
+    setSecurityYear(nextYear.toString());
+    setSecurityPayError("");
+    setShowSecurityPayModal(true);
+  };
+
   const handleManualRentSubmit = async (e) => {
     e.preventDefault();
     if (!payUser) return;
@@ -205,77 +245,61 @@ const UserManagement = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header Section */}
-      <div className="flex justify-between items-center mb-8">
-          <div>
-            <h2 className="text-2xl font-semibold text-[#2C3B2A]">
-              User Management
-            </h2>
-            <p className="text-[#5C7361] mt-1">
-              Manage your team members and their account permissions
-            </p>
-          </div>
-          <Button
-            onClick={toggleFormVisibility}
-            icon={UserPlus}
-            className="bg-[#395917] hover:bg-[#2C3B2A] text-white px-6 py-3 rounded-lg"
-          >
-            {editingUser ? "Cancel Editing" : "Add User"}
-          </Button>
-        </div>
+    <div className="space-y-4 p-4">
+    
+      {/* Header */}
+      <div className="text-center lg:text-left">
+        <h1 className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+          User Management
+        </h1>
+        <p className="text-slate-500 mt-1 text-sm">
+          Manage your team members and their account permissions
+        </p>
+      </div>
 
-      {/* Search and Filter Section */}
-      <div className="bg-white p-8 rounded-xl shadow-sm border border-[#E8EFEA]">
-          <div className="flex flex-col md:flex-row gap-6">
-            <div className="flex-grow">
-              <Input
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search users..."
-                className="text-base py-3"
-              />
-            </div>
-            <div className="md:w-64">
-              <Select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value)}
-                options={filterOptions()}
-                className="text-base py-3"
-              />
-            </div>
-          </div>
+      {/* Search Bar */}
+      <div className="flex gap-3 mb-4">
+        <div className="flex-1">
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search users..."
+            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
+          />
         </div>
+        <select
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value)}
+              className="px-3 py-2 bg-white/50 border border-white/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
+        >
+          {filterOptions().map(option => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+        
+        <Button
+          onClick={toggleFormVisibility}
+          icon={UserPlus}
+          className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:shadow-md transition-all duration-200"
+        >
+          {editingUser ? "Cancel Editing" : "Add User"}
+        </Button>
+      </div>
 
       {/* Users Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] overflow-hidden">
+      <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+        <div className="overflow-x-auto">
           <table className="w-full">
-            <thead>
-              <tr className="bg-[#2C3B2A] text-white">
-                <th className="px-8 py-4 text-left font-medium text-base">
-                  <div className="flex items-center gap-2">
-                    Username
-                    <span className="text-white/50">|</span>
-                  </div>
-                </th>
-                <th className="px-8 py-4 text-left font-medium text-base">
-                  <div className="flex items-center gap-2">
-                    Email
-                    <span className="text-white/50">|</span>
-                  </div>
-                </th>
-                <th className="px-8 py-4 text-left font-medium text-base">
-                  <div className="flex items-center gap-2">
-                    Role
-                    <span className="text-white/50">|</span>
-                  </div>
-                </th>
-                <th className="px-8 py-4 text-right font-medium text-base">
-                  Actions
-                </th>
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-700">Username</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-700">Email</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-700">Role</th>
+                <th className="px-4 py-2 text-left text-xs font-semibold text-slate-700">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E8EFEA]">
+            <tbody className="divide-y divide-slate-200">
               {filteredUsers.map((user) => {
                 const isResident = user.role === "resident";
                 const isSecurity = user.role === "security";
@@ -286,84 +310,91 @@ const UserManagement = () => {
                 const latestPeriodTo = latestPayment?.period_to
                   ? new Date(latestPayment.period_to)
                   : null;
-                const isResidentOverdue =
+                const nextMonthFirst = new Date(
+                  latestPeriodTo?.getFullYear() || new Date().getFullYear(),
+                  (latestPeriodTo?.getMonth() || new Date().getMonth()) + 1,
+                  1
+                );
+                const isOverdue =
                   isResident &&
                   latestPeriodTo &&
-                  latestPeriodTo < today &&
-                  latestPayment?.status !== "advance";
-
-                const latestSecurityPayment = isSecurity
-                  ? getLatestSecurityPayment(user.id)
-                  : null;
-                const latestSecurityEnd =
-                  latestSecurityPayment?.payment_end_date
-                    ? new Date(latestSecurityPayment.payment_end_date)
-                    : null;
-                const isSecurityOverdue =
-                  isSecurity &&
-                  ((latestSecurityEnd && latestSecurityEnd < today) ||
-                    !latestSecurityPayment);
-
-                const isOverdue = isResidentOverdue || isSecurityOverdue;
+                  nextMonthFirst < new Date() &&
+                  !user.has_pending_manual_payment;
 
                 return (
-                  <tr
-                    key={user.id}
-                    className={`hover:bg-[#F5F8F6] transition-colors ${
-                      isOverdue ? "bg-red-50" : ""
-                    }`}
-                  >
-                    <td
-                      className={`px-8 py-5 text-base font-medium ${
-                        isOverdue ? "text-red-700" : "text-[#2C3B2A]"
-                      }`}
-                    >
-                      {user.username}
+                  <tr key={user.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-4 py-2">
+                      <div className="font-medium text-slate-800 text-sm">{user.username}</div>
                     </td>
-                    <td className="px-8 py-5 text-base text-[#5C7361]">
-                      {user.email}
+                    <td className="px-4 py-2">
+                      <div className="text-slate-600 text-sm">{user.email}</div>
                     </td>
-                    <td className="px-8 py-5 text-base text-[#2C3B2A]">
-                      {user.role}
+                    <td className="px-4 py-2">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        isResident
+                          ? "bg-blue-100 text-blue-800"
+                          : isSecurity
+                          ? "bg-green-100 text-green-800"
+                          : "bg-purple-100 text-purple-800"
+                      }`}>
+                        {user.role}
+                      </span>
                     </td>
-                    <td className="px-8 py-5">
-                      <div className="flex gap-3 justify-end">
-                        <Button
-                          variant="secondary"
-                          onClick={() => openViewModal(user)}
-                          icon={Eye}
-                          className="p-2.5"
-                        />
-                        <Button
-                          variant="secondary"
-                          onClick={() => startEditing(user)}
-                          icon={Edit3}
-                          className="p-2.5"
-                        />
-                        <Button
-                          variant="danger"
-                          onClick={() => confirmDelete(user)}
-                          icon={Trash2}
-                          className="p-2.5"
-                        />
+                    <td className="px-4 py-2">
+                      <div className="flex items-center gap-1">
                         {isResident && (
-                          <Button
-                            variant="secondary"
-                            onClick={() => openPayModal(user)}
-                            icon={CreditCard}
-                            className="p-2.5"
-                            title="Record manual rent payment"
-                          />
+                          <>
+                            <button
+                              onClick={() => openManualRentModal(user)}
+                              className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                              title="Record Manual Rent"
+                            >
+                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            </button>
+                            {roomDetails && (
+                              <button
+                                onClick={() => openManualBillModal(user)}
+                                className="p-1.5 text-slate-600 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                                title="Record Manual Bill"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                              </button>
+                            )}
+                          </>
                         )}
                         {isSecurity && (
-                          <Button
-                            variant="secondary"
-                            onClick={() => openSecurityPayModal(user)}
-                            icon={CreditCard}
-                            className="p-2.5"
-                            title="Record manual salary payment"
-                          />
+                          <button
+                            onClick={() => openManualSalaryModal(user)}
+                            className="p-1.5 text-slate-600 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                            title="Record Manual Salary"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                          </button>
                         )}
+                        <button
+                          onClick={() => startEditing(user)}
+                          className="p-1.5 text-slate-600 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                          title="Edit"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => confirmDelete(user)}
+                          className="p-1.5 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          title="Delete"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -372,453 +403,452 @@ const UserManagement = () => {
             </tbody>
           </table>
         </div>
+      </div>
 
       {/* Form Overlay */}
       {isFormVisible && (
-          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full mx-4 p-8">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-semibold text-[#2C3B2A]">
-                  {editingUser ? "Edit User" : "Add New User"}
-                </h3>
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full mx-4 p-8">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold text-[#2C3B2A]">
+                {editingUser ? "Edit User" : "Add New User"}
+              </h3>
+              <Button
+                variant="secondary"
+                onClick={toggleFormVisibility}
+                icon={X}
+                className="p-2 hover:bg-[#E8EFEA]"
+              />
+            </div>
+            <form
+              onSubmit={editingUser ? handleEditUser : handleAddUser}
+              className="grid grid-cols-1 md:grid-cols-2 gap-6"
+            >
+              <Input
+                label="Username"
+                value={formData.username}
+                onChange={(e) =>
+                  setFormData({ ...formData, username: e.target.value })
+                }
+                required
+              />
+              <Input
+                label="Email"
+                type="email"
+                value={formData.email}
+                onChange={(e) =>
+                  setFormData({ ...formData, email: e.target.value })
+                }
+                required
+              />
+              {!editingUser && (
+                <Input
+                  label="Password"
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) =>
+                    setFormData({ ...formData, password: e.target.value })
+                  }
+                  required
+                />
+              )}
+              <Select
+                label="Role"
+                value={formData.role}
+                onChange={(e) =>
+                  setFormData({ ...formData, role: e.target.value })
+                }
+                options={roleOptions}
+                required
+              />
+              {formData.role === "resident" && (
+                <>
+                  <Input
+                    label="Room Number"
+                    value={formData.room_number}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        room_number: e.target.value,
+                      })
+                    }
+                    required={!editingUser}
+                  />
+                  <Input
+                    label="Monthly Rent"
+                    type="text"
+                    value={formData.monthly_rent}
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/[^\d.]/g, "");
+                      setFormData({ ...formData, monthly_rent: value });
+                    }}
+                    placeholder="0.00"
+                    required={!editingUser}
+                    className="font-mono"
+                  />
+                </>
+              )}
+              {formData.role === "security" && (
+                <Input
+                  label="Yearly Salary"
+                  type="text"
+                  value={formData.salary}
+                  onChange={(e) => {
+                    const value = e.target.value.replace(/[^\d.]/g, "");
+                    setFormData({ ...formData, salary: value });
+                  }}
+                  placeholder="0.00"
+                  required
+                  className="font-mono"
+                />
+              )}
+              <div className="col-span-full flex justify-end gap-4">
                 <Button
                   variant="secondary"
                   onClick={toggleFormVisibility}
-                  icon={X}
-                  className="p-2 hover:bg-[#E8EFEA]"
-                />
-              </div>
-              <form
-                onSubmit={editingUser ? handleEditUser : handleAddUser}
-                className="grid grid-cols-1 md:grid-cols-2 gap-6"
-              >
-                <Input
-                  label="Username"
-                  value={formData.username}
-                  onChange={(e) =>
-                    setFormData({ ...formData, username: e.target.value })
-                  }
-                  required
-                />
-                <Input
-                  label="Email"
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) =>
-                    setFormData({ ...formData, email: e.target.value })
-                  }
-                  required
-                />
-                {!editingUser && (
-                  <Input
-                    label="Password"
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) =>
-                      setFormData({ ...formData, password: e.target.value })
-                    }
-                    required
-                  />
-                )}
-                <Select
-                  label="Role"
-                  value={formData.role}
-                  onChange={(e) =>
-                    setFormData({ ...formData, role: e.target.value })
-                  }
-                  options={roleOptions}
-                  required
-                />
-                {formData.role === "resident" && (
-                  <>
-                    <Input
-                      label="Room Number"
-                      value={formData.room_number}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          room_number: e.target.value,
-                        })
-                      }
-                      required={!editingUser}
-                    />
-                    <Input
-                      label="Monthly Rent"
-                      type="text"
-                      value={formData.monthly_rent}
-                      onChange={(e) => {
-                        const value = e.target.value.replace(/[^\d.]/g, "");
-                        setFormData({ ...formData, monthly_rent: value });
-                      }}
-                      placeholder="0.00"
-                      required={!editingUser}
-                      className="font-mono"
-                    />
-                  </>
-                )}
-                {formData.role === "security" && (
-                  <Input
-                    label="Yearly Salary"
-                    type="text"
-                    value={formData.salary}
-                    onChange={(e) => {
-                      const value = e.target.value.replace(/[^\d.]/g, "");
-                      setFormData({ ...formData, salary: value });
-                    }}
-                    placeholder="0.00"
-                    required
-                    className="font-mono"
-                  />
-                )}
-                <div className="col-span-full flex justify-end gap-4">
-                  <Button
-                    variant="secondary"
-                    onClick={toggleFormVisibility}
-                    className="px-6 py-2.5"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="bg-[#395917] hover:bg-[#2C3B2A] text-white px-6 py-2.5"
-                  >
-                    {editingUser ? "Update User" : "Add User"}
-                  </Button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-      {/* Delete Confirmation Modal */}
-      {showConfirm && (
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full mx-4">
-              <h3 className="text-xl font-semibold text-[#2C3B2A] mb-4">
-                Confirm Delete
-              </h3>
-              <p className="text-[#5C7361] mb-6">
-                Are you sure you want to delete {userToDelete?.username}? This
-                action cannot be undone.
-              </p>
-              <div className="flex gap-4 justify-end">
-                <Button
-                  variant="secondary"
-                  onClick={handleCancelDelete}
                   className="px-6 py-2.5"
                 >
                   Cancel
                 </Button>
                 <Button
-                  variant="danger"
-                  onClick={handleConfirmDelete}
-                  className="px-6 py-2.5"
+                  type="submit"
+                  className="bg-[#395917] hover:bg-[#2C3B2A] text-white px-6 py-2.5"
                 >
-                  Delete
+                  {editingUser ? "Update User" : "Add User"}
                 </Button>
               </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showConfirm && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full mx-4">
+            <h3 className="text-xl font-semibold text-[#2C3B2A] mb-4">
+              Confirm Delete
+            </h3>
+            <p className="text-[#5C7361] mb-6">
+              Are you sure you want to delete {userToDelete?.username}? This
+              action cannot be undone.
+            </p>
+            <div className="flex gap-4 justify-end">
+              <Button
+                variant="secondary"
+                onClick={handleCancelDelete}
+                className="px-6 py-2.5"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                onClick={handleConfirmDelete}
+                className="px-6 py-2.5"
+              >
+                Delete
+              </Button>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Resident View Modal */}
-        {showViewModal && viewUser && (
-          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 p-8">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-semibold text-[#2C3B2A]">
-                  Resident Details
-                </h3>
-                <Button
-                  variant="secondary"
-                  onClick={() => setShowViewModal(false)}
-                  icon={X}
-                  className="p-2 hover:bg-[#E8EFEA]"
-                />
-              </div>
-              <div className="space-y-3 text-sm text-[#2C3B2A]">
-                <p>
-                  <span className="font-semibold">Name:</span>{" "}
-                  {viewUser.username}
-                </p>
-                <p>
-                  <span className="font-semibold">Email:</span> {viewUser.email}
-                </p>
-                <p>
-                  <span className="font-semibold">Role:</span> {viewUser.role}
-                </p>
-                {viewUser.role === "resident" && viewUser.room_details && (
-                  <>
-                    <p>
-                      <span className="font-semibold">Room Number:</span>{" "}
-                      {viewUser.room_details.room_number}
-                    </p>
-                    <p>
-                      <span className="font-semibold">Monthly Rent:</span> ₹
-                      {viewUser.room_details.monthly_rent}
-                    </p>
-                  </>
-                )}
-                {viewUser.role === "resident" &&
-                  (() => {
-                    const latestPayment = getLatestPaymentForResident(
-                      viewUser.id,
-                    );
-                    const dueInfo = getResidentDueInfo(viewUser);
+      {/* Resident View Modal */}
+      {showViewModal && viewUser && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 p-8">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold text-[#2C3B2A]">
+                Resident Details
+              </h3>
+              <Button
+                variant="secondary"
+                onClick={() => setShowViewModal(false)}
+                icon={X}
+                className="p-2 hover:bg-[#E8EFEA]"
+              />
+            </div>
+            <div className="space-y-3 text-sm text-[#2C3B2A]">
+              <p>
+                <span className="font-semibold">Name:</span> {viewUser.username}
+              </p>
+              <p>
+                <span className="font-semibold">Email:</span> {viewUser.email}
+              </p>
+              <p>
+                <span className="font-semibold">Role:</span> {viewUser.role}
+              </p>
+              {viewUser.role === "resident" && viewUser.room_details && (
+                <>
+                  <p>
+                    <span className="font-semibold">Room Number:</span>{" "}
+                    {viewUser.room_details.room_number}
+                  </p>
+                  <p>
+                    <span className="font-semibold">Monthly Rent:</span> ₹
+                    {viewUser.room_details.monthly_rent}
+                  </p>
+                </>
+              )}
+              {viewUser.role === "resident" &&
+                (() => {
+                  const latestPayment = getLatestPaymentForResident(
+                    viewUser.id,
+                  );
+                  const dueInfo = getResidentDueInfo(viewUser);
 
-                    return (
-                      <>
-                        {latestPayment && (
-                          <>
-                            <p>
-                              <span className="font-semibold">
-                                Last Paid Period:
-                              </span>{" "}
-                              {latestPayment.period_from} to{" "}
-                              {latestPayment.period_to}
-                            </p>
-                            <p>
-                              <span className="font-semibold">
-                                Last Payment Status:
-                              </span>{" "}
-                              {latestPayment.status}
-                            </p>
-                          </>
-                        )}
-                        {dueInfo && (
-                          <>
-                            <p>
-                              <span className="font-semibold">
-                                Next Due Period:
-                              </span>{" "}
-                              {dueInfo.nextPeriodFrom} to {dueInfo.nextPeriodTo}
-                            </p>
-                            <p>
-                              <span className="font-semibold">
-                                Estimated Due Amount:
-                              </span>{" "}
-                              ₹{dueInfo.dueAmount.toFixed(2)}
-                            </p>
-                            {dueInfo.isOverdue && (
-                              <p className="text-red-600 text-xs">
-                                Overdue for approximately {dueInfo.monthsToPay}{" "}
-                                month(s).
-                              </p>
-                            )}
-                          </>
-                        )}
-                      </>
-                    );
-                  })()}
-                {viewUser.role === "security" &&
-                  (() => {
-                    const latest = getLatestSecurityPayment(viewUser.id);
-                    const salary = Number(viewUser.salary) || 0;
-                    const currentYear = today.getFullYear();
-                    let overdueYears = 0;
-                    if (latest?.payment_end_date) {
-                      const end = new Date(latest.payment_end_date);
-                      if (end < today) {
-                        overdueYears = Math.max(
-                          1,
-                          currentYear - latest.payment_year,
-                        );
-                      }
-                    } else if (!latest && salary > 0) {
-                      overdueYears = 1;
-                    }
-                    const dueSalary = overdueYears * salary;
-                    return (
-                      <>
-                        {salary > 0 && (
+                  return (
+                    <>
+                      {latestPayment && (
+                        <>
                           <p>
                             <span className="font-semibold">
-                              Yearly Salary:
+                              Last Paid Period:
                             </span>{" "}
-                            ₹{salary.toFixed(2)}
+                            {latestPayment.period_from} to{" "}
+                            {latestPayment.period_to}
                           </p>
-                        )}
-                        {latest && (
-                          <>
-                            <p>
-                              <span className="font-semibold">
-                                Last Payment Year:
-                              </span>{" "}
-                              {latest.payment_year}
-                            </p>
-                            <p>
-                              <span className="font-semibold">
-                                Last Payment Ends:
-                              </span>{" "}
-                              {latest.payment_end_date}
-                            </p>
-                          </>
-                        )}
-                        {overdueYears > 0 && (
-                          <>
+                          <p>
+                            <span className="font-semibold">
+                              Last Payment Status:
+                            </span>{" "}
+                            {latestPayment.status}
+                          </p>
+                        </>
+                      )}
+                      {dueInfo && (
+                        <>
+                          <p>
+                            <span className="font-semibold">
+                              Next Due Period:
+                            </span>{" "}
+                            {dueInfo.nextPeriodFrom} to {dueInfo.nextPeriodTo}
+                          </p>
+                          <p>
+                            <span className="font-semibold">
+                              Estimated Due Amount:
+                            </span>{" "}
+                            ₹{dueInfo.dueAmount.toFixed(2)}
+                          </p>
+                          {dueInfo.isOverdue && (
                             <p className="text-red-600 text-xs">
-                              Salary overdue for approximately {overdueYears}{" "}
-                              year(s).
+                              Overdue for approximately {dueInfo.monthsToPay}{" "}
+                              month(s).
                             </p>
-                            {dueSalary > 0 && (
-                              <p>
-                                <span className="font-semibold">
-                                  Estimated Due Salary:
-                                </span>{" "}
-                                ₹{dueSalary.toFixed(2)}
-                              </p>
-                            )}
-                          </>
-                        )}
-                      </>
-                    );
-                  })()}
-              </div>
+                          )}
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
+              {viewUser.role === "security" &&
+                (() => {
+                  const latest = getLatestSecurityPayment(viewUser.id);
+                  const salary = Number(viewUser.salary) || 0;
+                  const currentYear = today.getFullYear();
+                  let overdueYears = 0;
+                  if (latest?.payment_end_date) {
+                    const end = new Date(latest.payment_end_date);
+                    if (end < today) {
+                      overdueYears = Math.max(
+                        1,
+                        currentYear - latest.payment_year,
+                      );
+                    }
+                  } else if (!latest && salary > 0) {
+                    overdueYears = 1;
+                  }
+                  const dueSalary = overdueYears * salary;
+                  return (
+                    <>
+                      {salary > 0 && (
+                        <p>
+                          <span className="font-semibold">Yearly Salary:</span>{" "}
+                          ₹{salary.toFixed(2)}
+                        </p>
+                      )}
+                      {latest && (
+                        <>
+                          <p>
+                            <span className="font-semibold">
+                              Last Payment Year:
+                            </span>{" "}
+                            {latest.payment_year}
+                          </p>
+                          <p>
+                            <span className="font-semibold">
+                              Last Payment Ends:
+                            </span>{" "}
+                            {latest.payment_end_date}
+                          </p>
+                        </>
+                      )}
+                      {overdueYears > 0 && (
+                        <>
+                          <p className="text-red-600 text-xs">
+                            Salary overdue for approximately {overdueYears}{" "}
+                            year(s).
+                          </p>
+                          {dueSalary > 0 && (
+                            <p>
+                              <span className="font-semibold">
+                                Estimated Due Salary:
+                              </span>{" "}
+                              ₹{dueSalary.toFixed(2)}
+                            </p>
+                          )}
+                        </>
+                      )}
+                    </>
+                  );
+                })()}
             </div>
           </div>
-        )}
+        </div>
+      )}
 
       {/* Manual Rent Payment Modal */}
       {showPayModal && payUser && (
-          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 p-8">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-semibold text-[#2C3B2A]">
-                  Record Manual Rent Payment
-                </h3>
-                <Button
-                  variant="secondary"
-                  onClick={() => setShowPayModal(false)}
-                  icon={X}
-                  className="p-2 hover:bg-[#E8EFEA]"
-                />
-              </div>
-              <form onSubmit={handleManualRentSubmit} className="space-y-4">
-                <p className="text-sm text-[#5C7361]">
-                  Resident:{" "}
-                  <span className="font-semibold text-[#2C3B2A]">
-                    {payUser.username}
-                  </span>
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <Input
-                    label="Period From"
-                    type="date"
-                    value={payPeriodFrom}
-                    onChange={(e) => setPayPeriodFrom(e.target.value)}
-                    required
-                  />
-                  <Input
-                    label="Period To"
-                    type="date"
-                    value={payPeriodTo}
-                    onChange={(e) => setPayPeriodTo(e.target.value)}
-                    required
-                  />
-                </div>
-                {payError && <p className="text-sm text-red-600">{payError}</p>}
-                <div className="flex justify-end gap-4 mt-4">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setShowPayModal(false)}
-                    className="px-6 py-2.5"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="bg-[#395917] hover:bg-[#2C3B2A] text-white px-6 py-2.5"
-                  >
-                    Save Payment
-                  </Button>
-                </div>
-              </form>
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 p-8">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold text-[#2C3B2A]">
+                Record Manual Rent Payment
+              </h3>
+              <Button
+                variant="secondary"
+                onClick={() => setShowPayModal(false)}
+                icon={X}
+                className="p-2 hover:bg-[#E8EFEA]"
+              />
             </div>
-          </div>
-        )}
-
-        {/* Manual Security Salary Payment Modal */}
-        {showSecurityPayModal && securityUser && (
-          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 p-8">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-semibold text-[#2C3B2A]">
-                  Record Manual Security Salary
-                </h3>
-                <Button
-                  variant="secondary"
-                  onClick={() => setShowSecurityPayModal(false)}
-                  icon={X}
-                  className="p-2 hover:bg-[#E8EFEA]"
-                />
-              </div>
-              <form
-                onSubmit={async (e) => {
-                  e.preventDefault();
-                  if (!securityUser) return;
-                  if (!securityYear) {
-                    setSecurityPayError("Please enter payment year.");
-                    return;
-                  }
-                  try {
-                    await recordManualSecuritySalary({
-                      securityId: securityUser.id,
-                      payment_year: parseInt(securityYear, 10),
-                    });
-                    setShowSecurityPayModal(false);
-                    setSecurityUser(null);
-                    setSecurityPayError("");
-                  } catch (err) {
-                    const apiError = err.response?.data;
-                    if (apiError?.error) {
-                      setSecurityPayError(apiError.error);
-                    } else {
-                      setSecurityPayError(
-                        "Failed to record security salary. Please try again.",
-                      );
-                    }
-                  }
-                }}
-                className="space-y-4"
-              >
-                <p className="text-sm text-[#5C7361]">
-                  Security User:{" "}
-                  <span className="font-semibold text-[#2C3B2A]">
-                    {securityUser.username}
-                  </span>
-                </p>
+            <form onSubmit={handleManualRentSubmit} className="space-y-4">
+              <p className="text-sm text-[#5C7361]">
+                Resident:{" "}
+                <span className="font-semibold text-[#2C3B2A]">
+                  {payUser.username}
+                </span>
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Input
-                  label="Payment Year"
-                  type="number"
-                  value={securityYear}
-                  onChange={(e) => setSecurityYear(e.target.value)}
+                  label="Period From"
+                  type="date"
+                  value={payPeriodFrom}
+                  onChange={(e) => setPayPeriodFrom(e.target.value)}
                   required
                 />
-                {securityPayError && (
-                  <p className="text-sm text-red-600">{securityPayError}</p>
-                )}
-                <div className="flex justify-end gap-4 mt-4">
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    onClick={() => setShowSecurityPayModal(false)}
-                    className="px-6 py-2.5"
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="bg-[#395917] hover:bg-[#2C3B2A] text-white px-6 py-2.5"
-                  >
-                    Save Salary
-                  </Button>
-                </div>
-              </form>
-            </div>
+                <Input
+                  label="Period To"
+                  type="date"
+                  value={payPeriodTo}
+                  onChange={(e) => setPayPeriodTo(e.target.value)}
+                  required
+                />
+              </div>
+              {payError && <p className="text-sm text-red-600">{payError}</p>}
+              <div className="flex justify-end gap-4 mt-4">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setShowPayModal(false)}
+                  className="px-6 py-2.5"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-[#395917] hover:bg-[#2C3B2A] text-white px-6 py-2.5"
+                >
+                  Save Payment
+                </Button>
+              </div>
+            </form>
           </div>
-        )}
+        </div>
+      )}
+
+      {/* Manual Security Salary Payment Modal */}
+      {showSecurityPayModal && securityUser && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 p-8">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-semibold text-[#2C3B2A]">
+                Record Manual Security Salary
+              </h3>
+              <Button
+                variant="secondary"
+                onClick={() => setShowSecurityPayModal(false)}
+                icon={X}
+                className="p-2 hover:bg-[#E8EFEA]"
+              />
+            </div>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (!securityUser) return;
+                if (!securityYear) {
+                  setSecurityPayError("Please enter payment year.");
+                  return;
+                }
+                try {
+                  await recordManualSecuritySalary({
+                    securityId: securityUser.id,
+                    payment_year: parseInt(securityYear, 10),
+                  });
+                  setShowSecurityPayModal(false);
+                  setSecurityUser(null);
+                  setSecurityPayError("");
+                } catch (err) {
+                  const apiError = err.response?.data;
+                  if (apiError?.error) {
+                    setSecurityPayError(apiError.error);
+                  } else {
+                    setSecurityPayError(
+                      "Failed to record security salary. Please try again.",
+                    );
+                  }
+                }
+              }}
+              className="space-y-4"
+            >
+              <p className="text-sm text-[#5C7361]">
+                Security User:{" "}
+                <span className="font-semibold text-[#2C3B2A]">
+                  {securityUser.username}
+                </span>
+              </p>
+              <Input
+                label="Payment Year"
+                type="number"
+                value={securityYear}
+                onChange={(e) => setSecurityYear(e.target.value)}
+                required
+              />
+              {securityPayError && (
+                <p className="text-sm text-red-600">{securityPayError}</p>
+              )}
+              <div className="flex justify-end gap-4 mt-4">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setShowSecurityPayModal(false)}
+                  className="px-6 py-2.5"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="bg-[#395917] hover:bg-[#2C3B2A] text-white px-6 py-2.5"
+                >
+                  Save Salary
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
+   
   );
 };
 

@@ -154,197 +154,197 @@ const GuardDashboard = () => {
         return <SecurityStripeSetup />;
       default:
         return (
-          <div className="p-8 bg-[#F5F8F6]">
-            <div className="max-w-7xl mx-auto space-y-6">
-              <div>
-                <h2 className="text-2xl font-semibold text-[#2C3B2A]">
-                  Security Dashboard
-                </h2>
-                <p className="text-sm text-[#5C7361] mt-1">
-                  Monitor and manage visitor activities
-                </p>
+          // <div className="p-8 bg-[#F5F8F6]">
+          <div className="max-w-full mx-auto space-y-6">
+            <div>
+              <h2 className="text-2xl font-semibold text-[#2C3B2A]">
+                Security Dashboard
+              </h2>
+              <p className="text-sm text-[#5C7361] mt-1">
+                Monitor and manage visitor activities
+              </p>
+            </div>
+
+            {error ? (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center text-red-800">
+                {error}
               </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <ChartCard
+                    title="Visitor Trends"
+                    description="Daily visitor counts over the last 30 days"
+                    footer="Showing total visitors per day"
+                    className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6"
+                  >
+                    {visitorTrends.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={300}>
+                        <LineChart
+                          data={visitorTrends}
+                          margin={{
+                            top: 10,
+                            right: 12,
+                            left: 12,
+                            bottom: 10,
+                          }}
+                        >
+                          <CartesianGrid vertical={false} stroke="#E8EFEA" />
+                          <XAxis
+                            dataKey="day"
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            tickFormatter={(value) => value.slice(8, 10)}
+                            fontSize={12}
+                          />
+                          <YAxis
+                            tickLine={false}
+                            axisLine={false}
+                            tickMargin={8}
+                            domain={[0, "auto"]}
+                            fontSize={12}
+                          />
+                          <Tooltip content={<LineTooltip />} />
+                          <Line
+                            type="monotone"
+                            dataKey="total"
+                            stroke="#395917"
+                            strokeWidth={2}
+                            dot={false}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-[300px] flex items-center justify-center text-sm text-[#5C7361]">
+                        No visitor trend data available
+                      </div>
+                    )}
+                  </ChartCard>
 
-              {error ? (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center text-red-800">
-                  {error}
-                </div>
-              ) : (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <ChartCard
-                      title="Visitor Trends"
-                      description="Daily visitor counts over the last 30 days"
-                      footer="Showing total visitors per day"
-                      className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6"
-                    >
-                      {visitorTrends.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={300}>
-                          <LineChart
-                            data={visitorTrends}
-                            margin={{
-                              top: 10,
-                              right: 12,
-                              left: 12,
-                              bottom: 10,
-                            }}
+                  <ChartCard
+                    title="Visitor Status"
+                    description="Current visitor status distribution"
+                    footer="Showing total visitors by status"
+                    className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6"
+                  >
+                    {visitorStats.length > 0 ? (
+                      <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                          <Pie
+                            data={visitorStats}
+                            dataKey="count"
+                            nameKey="status"
+                            innerRadius={60}
+                            strokeWidth={5}
                           >
-                            <CartesianGrid vertical={false} stroke="#E8EFEA" />
-                            <XAxis
-                              dataKey="day"
-                              tickLine={false}
-                              axisLine={false}
-                              tickMargin={8}
-                              tickFormatter={(value) => value.slice(8, 10)}
-                              fontSize={12}
-                            />
-                            <YAxis
-                              tickLine={false}
-                              axisLine={false}
-                              tickMargin={8}
-                              domain={[0, "auto"]}
-                              fontSize={12}
-                            />
-                            <Tooltip content={<LineTooltip />} />
-                            <Line
-                              type="monotone"
-                              dataKey="total"
-                              stroke="#395917"
-                              strokeWidth={2}
-                              dot={false}
-                            />
-                          </LineChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div className="h-[300px] flex items-center justify-center text-sm text-[#5C7361]">
-                          No visitor trend data available
-                        </div>
-                      )}
-                    </ChartCard>
-
-                    <ChartCard
-                      title="Visitor Status"
-                      description="Current visitor status distribution"
-                      footer="Showing total visitors by status"
-                      className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6"
-                    >
-                      {visitorStats.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={300}>
-                          <PieChart>
-                            <Pie
-                              data={visitorStats}
-                              dataKey="count"
-                              nameKey="status"
-                              innerRadius={60}
-                              strokeWidth={5}
-                            >
-                              <Label
-                                content={({ viewBox }) => {
-                                  if (
-                                    viewBox &&
-                                    "cx" in viewBox &&
-                                    "cy" in viewBox
-                                  ) {
-                                    return (
-                                      <text
+                            <Label
+                              content={({ viewBox }) => {
+                                if (
+                                  viewBox &&
+                                  "cx" in viewBox &&
+                                  "cy" in viewBox
+                                ) {
+                                  return (
+                                    <text
+                                      x={viewBox.cx}
+                                      y={viewBox.cy}
+                                      textAnchor="middle"
+                                      dominantBaseline="middle"
+                                    >
+                                      <tspan
                                         x={viewBox.cx}
                                         y={viewBox.cy}
-                                        textAnchor="middle"
-                                        dominantBaseline="middle"
+                                        className="text-3xl font-bold text-[#2C3B2A]"
                                       >
-                                        <tspan
-                                          x={viewBox.cx}
-                                          y={viewBox.cy}
-                                          className="text-3xl font-bold text-[#2C3B2A]"
-                                        >
-                                          {totalVisitors.toLocaleString()}
-                                        </tspan>
-                                        <tspan
-                                          x={viewBox.cx}
-                                          y={(viewBox.cy || 0) + 24}
-                                          className="text-sm text-[#5C7361]"
-                                        >
-                                          Visitors
-                                        </tspan>
-                                      </text>
-                                    );
-                                  }
-                                }}
-                              />
-                            </Pie>
-                            <Tooltip content={<PieTooltip />} />
-                          </PieChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div className="h-[300px] flex items-center justify-center text-sm text-[#5C7361]">
-                          No visitor data available
-                        </div>
-                      )}
-                    </ChartCard>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6">
-                      <h3 className="text-lg font-medium text-[#2C3B2A] mb-4">
-                        Current Salary
-                      </h3>
-                      <p className="text-2xl font-bold text-[#395917]">
-                        {salaryInfo
-                          ? `₹${salaryInfo.current_salary}`
-                          : "Loading..."}
-                      </p>
-                    </div>
-                    <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6 md:col-span-2">
-                      <h3 className="text-lg font-medium text-[#2C3B2A] mb-4">
-                        Recent Visitors
-                      </h3>
-                      {recentVisitors.length > 0 ? (
-                        <ul className="space-y-2">
-                          {recentVisitors.map((visitor) => (
-                            <li
-                              key={visitor.id}
-                              className="flex justify-between text-sm text-[#5C7361]"
-                            >
-                              <span>{visitor.name}</span>
-                              <span>
-                                {visitor.status} - {visitor.created_at}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-sm text-[#5C7361]">
-                          No recent visitors
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6">
-                      <h3 className="text-lg font-medium text-[#2C3B2A] mb-4">
-                        Quick Actions
-                      </h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <button
-                          onClick={() => setCurrentPage("visitors")}
-                          className="bg-[#395917] text-white px-4 py-2 rounded-lg hover:bg-[#2C3B2A] transition-colors text-sm"
-                        >
-                          Manage Visitors
-                        </button>
-                        <button
-                          onClick={() => setCurrentPage("stripeSetup")}
-                          className="bg-[#395917] text-white px-4 py-2 rounded-lg hover:bg-[#2C3B2A] transition-colors text-sm"
-                        >
-                          View Payments
-                        </button>
+                                        {totalVisitors.toLocaleString()}
+                                      </tspan>
+                                      <tspan
+                                        x={viewBox.cx}
+                                        y={(viewBox.cy || 0) + 24}
+                                        className="text-sm text-[#5C7361]"
+                                      >
+                                        Visitors
+                                      </tspan>
+                                    </text>
+                                  );
+                                }
+                              }}
+                            />
+                          </Pie>
+                          <Tooltip content={<PieTooltip />} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-[300px] flex items-center justify-center text-sm text-[#5C7361]">
+                        No visitor data available
                       </div>
+                    )}
+                  </ChartCard>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6">
+                    <h3 className="text-lg font-medium text-[#2C3B2A] mb-4">
+                      Current Salary
+                    </h3>
+                    <p className="text-2xl font-bold text-[#395917]">
+                      {salaryInfo
+                        ? `₹${salaryInfo.current_salary}`
+                        : "Loading..."}
+                    </p>
+                  </div>
+                  <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6 md:col-span-2">
+                    <h3 className="text-lg font-medium text-[#2C3B2A] mb-4">
+                      Recent Visitors
+                    </h3>
+                    {recentVisitors.length > 0 ? (
+                      <ul className="space-y-2">
+                        {recentVisitors.map((visitor) => (
+                          <li
+                            key={visitor.id}
+                            className="flex justify-between text-sm text-[#5C7361]"
+                          >
+                            <span>{visitor.name}</span>
+                            <span>
+                              {visitor.status} - {visitor.created_at}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-[#5C7361]">
+                        No recent visitors
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6">
+                    <h3 className="text-lg font-medium text-[#2C3B2A] mb-4">
+                      Quick Actions
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <button
+                        onClick={() => setCurrentPage("visitors")}
+                        className="bg-[#395917] text-white px-4 py-2 rounded-lg hover:bg-[#2C3B2A] transition-colors text-sm"
+                      >
+                        Manage Visitors
+                      </button>
+                      <button
+                        onClick={() => setCurrentPage("stripeSetup")}
+                        className="bg-[#395917] text-white px-4 py-2 rounded-lg hover:bg-[#2C3B2A] transition-colors text-sm"
+                      >
+                        View Payments
+                      </button>
                     </div>
                   </div>
-                </>
-              )}
-            </div>
+                </div> */}
+              </>
+            )}
           </div>
+          // </div>
         );
     }
   };

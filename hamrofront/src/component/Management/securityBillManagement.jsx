@@ -71,44 +71,45 @@ const SecurityBillManagement = () => {
   });
 
   return (
-    <div className="p-6 md:p-8 bg-gray-50 min-h-screen">
-      <div className="max-w-6xl mx-auto bg-white rounded-lg shadow-sm p-6">
+    // <div className="p-6 md:p-8 bg-gray-50 min-h-screen">
+    <>
+      <div className="max-w-full mx-auto bg-white rounded-lg shadow-sm p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
           <h2 className="text-2xl font-semibold text-gray-800">
             Bill Management
           </h2>
-          <div className="flex-1 flex flex-col md:flex-row md:items-center md:justify-end gap-2">
-            <input
-              type="text"
-              placeholder="Search by room"
-              value={searchRoom}
-              onChange={(e) => setSearchRoom(e.target.value)}
-              className="w-full md:w-40 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <input
-              type="text"
-              placeholder="Search by name"
-              value={searchName}
-              onChange={(e) => setSearchName(e.target.value)}
-              className="w-full md:w-48 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full md:w-40 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All status</option>
-              <option value="paid">Paid</option>
-              <option value="unpaid">Unpaid</option>
-            </select>
-            <button
-              type="button"
-              onClick={handleOpenCreate}
-              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700"
-            >
-              Create Bill
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleOpenCreate}
+            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700"
+          >
+            Create Bill
+          </button>
+        </div>
+        <div className="flex-1 flex flex-col md:flex-row md:items-center md:justify-end gap-2 mb-5">
+          <input
+            type="text"
+            placeholder="Search by room"
+            value={searchRoom}
+            onChange={(e) => setSearchRoom(e.target.value)}
+            className="w-full md:w-40 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <input
+            type="text"
+            placeholder="Search by name"
+            value={searchName}
+            onChange={(e) => setSearchName(e.target.value)}
+            className="w-full md:w-48 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="w-full md:w-40 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="all">All status</option>
+            <option value="paid">Paid</option>
+            <option value="unpaid">Unpaid</option>
+          </select>
         </div>
 
         {error && <div className="mb-4 text-sm text-red-600">{error}</div>}
@@ -479,7 +480,8 @@ const SecurityBillManagement = () => {
           </div>
         )}
       </div>
-    </div>
+      {/* </div> */}
+    </>
   );
 };
 

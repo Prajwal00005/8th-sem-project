@@ -109,105 +109,98 @@ const AdminSubscriptionPayment = () => {
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Header Section */}
-      <div className="flex justify-between items-center mb-8">
-          <div>
-            <h2 className="text-2xl font-semibold text-[#2C3B2A]">
-              Subscription Payment
-            </h2>
-            <p className="text-[#5C7361] mt-1">
-              Manage your annual subscription.
-            </p>
+    <div className="space-y-4 p-4">
+      {/* Header */}
+      <div className="text-center lg:text-left">
+        <h1 className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+          Subscription Payment
+        </h1>
+        <p className="text-slate-500 mt-1 text-sm">
+          Manage your annual subscription.
+        </p>
+      </div>
+
+      {/* Status Card */}
+      <div className="bg-white/70 backdrop-blur-sm rounded-lg border border-white/50 p-4">
+        <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+              hasActiveSubscription 
+                ? 'bg-gradient-to-br from-green-500 to-emerald-600' 
+                : 'bg-gradient-to-br from-orange-500 to-red-600'
+            }`}>
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-slate-800">
+                Subscription Status
+              </h3>
+              <p className="text-xs text-slate-500">
+                {hasActiveSubscription ? `Active for ${currentYear}` : 'Not Active'}
+              </p>
+              <p className="text-xs text-slate-600 mt-1">
+                Yearly Price: ₹{subscriptionPrice}
+              </p>
+            </div>
           </div>
           {!hasActiveSubscription && (
             <Button
               onClick={handlePaySubscription}
-              className="bg-[#395917] hover:bg-[#2C3B2A] text-white px-6 py-3 rounded-lg"
+              className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:shadow-md transition-all duration-200"
               disabled={!subscriptionPrice || subscriptionPrice <= 0}
             >
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
               Pay Subscription
             </Button>
           )}
         </div>
+      </div>
 
-      {/* Error Alert */}
-      {error && (
-        <Alert variant="error" className="mb-6 rounded-xl">
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
-      {/* Reminder Section */}
+      {/* Reminder Alert */}
       {showReminder &&
         subscriptionReminder &&
         subscriptionReminder.reminder !==
           "No subscription payments due within the next 7 days." && (
-          <div className="bg-white border border-[#E8EFEA] rounded-xl p-6 shadow-sm flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-[#2C3B2A]">
-                {subscriptionReminder.reminder}
-              </p>
-              <p className="text-xs text-[#5C7361]">
-                Due: {subscriptionReminder.due_date} (
-                {subscriptionReminder.days_until_due} days left)
-              </p>
+          <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-orange-800">
+                    {subscriptionReminder.reminder}
+                  </p>
+                  <p className="text-xs text-orange-600">
+                    Due: {subscriptionReminder.due_date} ({subscriptionReminder.days_until_due} days left)
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={() => setShowReminder(false)}
+                variant="secondary"
+                icon={X}
+                className="p-1.5 hover:bg-orange-100 text-orange-600"
+              />
             </div>
-            <Button
-              onClick={() => setShowReminder(false)}
-              variant="secondary"
-              icon={X}
-              className="p-2 hover:bg-[#E8EFEA]"
-            />
           </div>
         )}
 
-      {/* Subscription Details and Payment History */}
+      {/* Payment History */}
       {!showPaymentForm && (
-        <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] overflow-hidden">
-          <div className="px-8 py-6">
-            <h3 className="text-xl font-semibold text-[#2C3B2A] mb-4">
-              Subscription Details
-            </h3>
-            <p className="text-base text-[#5C7361] mb-4">
-              Yearly Subscription Price: ₹{subscriptionPrice}
-            </p>
-            {hasActiveSubscription ? (
-              <div className="mb-4">
-                <p className="text-base font-medium text-[#395917]">
-                  Your subscription for {currentYear} is active.
-                </p>
-                {subscriptionPayments.find(
-                  (p) =>
-                    p.subscription_year === currentYear &&
-                    p.status === "active",
-                )?.subscription_end_date && (
-                  <p className="text-sm text-[#10bb35]">
-                    Valid until: {" "}
-                    {new Date(
-                      subscriptionPayments.find(
-                        (p) =>
-                          p.subscription_year === currentYear &&
-                          p.status === "active",
-                      ).subscription_end_date,
-                    ).toLocaleDateString()}
-                  </p>
-                )}
+        <div className="bg-white/70 backdrop-blur-sm rounded-lg border border-white/50 overflow-hidden">
+          <div className="p-3 border-b border-white/50">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-sm font-semibold text-slate-800">Payment History</h3>
+                <p className="text-xs text-slate-500 mt-1">All subscription payment records</p>
               </div>
-            ) : (
-              <Button
-                onClick={handlePaySubscription}
-                className="bg-[#395917] hover:bg-[#2C3B2A] text-white px-6 py-2.5 rounded-lg"
-                disabled={!subscriptionPrice || subscriptionPrice <= 0}
-              >
-                Pay Subscription
-              </Button>
-            )}
-          </div>
-
-          <div className="border-t border-[#E8EFEA]">
-            <div className="flex justify-between items-center px-8 py-4 bg-[#E8EFEA] text-[#2C3B2A]">
-              <h3 className="text-xl font-semibold">Payment History</h3>
               <PaymentHistoryPDF
                 title="Subscription Payment History"
                 data={subscriptionPayments}
@@ -215,6 +208,7 @@ const AdminSubscriptionPayment = () => {
                 filename="admin_subscription_payment_history"
               />
             </div>
+          </div>
             {subscriptionPayments.length === 0 ? (
               <p className="text-[#5C7361] px-8 py-8">
                 No payment history available.
@@ -279,7 +273,8 @@ const AdminSubscriptionPayment = () => {
               </table>
             )}
           </div>
-        </div>
+        
+        
       )}
 
       {/* Payment Form Modal */}

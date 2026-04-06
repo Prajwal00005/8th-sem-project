@@ -123,164 +123,210 @@ const ResidentDashboard = () => {
         return <ChatSection />;
       default:
         return (
-          <div className="p-8 bg-[#F5F8F6]">
-            <div className="max-w-7xl mx-auto space-y-6">
-              <div>
-                <h2 className="text-2xl font-semibold text-[#2C3B2A]">
-                  Resident Dashboard
-                </h2>
-                <p className="text-sm text-[#5C7361] mt-1">
-                  Welcome to your personal dashboard
-                </p>
+          <div className="space-y-4 p-4">
+            {/* Header */}
+            <div className="text-center lg:text-left">
+              <h1 className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+                Dashboard Overview
+              </h1>
+              <p className="text-slate-500 mt-1 text-sm">
+                Welcome to your personal dashboard
+              </p>
+            </div>
+
+            {/* Stats Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="bg-white/70 backdrop-blur-sm rounded-lg border border-white/50 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <span className="text-lg font-bold text-slate-800">
+                    {activeComplaints}
+                  </span>
+                </div>
+                <h3 className="text-xs font-semibold text-slate-800">Active Complaints</h3>
+                <p className="text-xs text-slate-500 mt-1">Currently in progress</p>
               </div>
 
-              {error ? (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center text-red-800">
-                  {error}
+              <div className="bg-white/70 backdrop-blur-sm rounded-lg border border-white/50 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <span className="text-lg font-bold text-slate-800">
+                    {complaintTrends.reduce(
+                      (sum, item) => sum + item.resolved,
+                      0,
+                    ) || 0}
+                  </span>
                 </div>
-              ) : (
-                <>
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
-                    {/* Complaint Trends Chart */}
-                    <div className="md:col-span-3 lg:col-span-3">
-                      <ChartCard
-                        title="Complaint Trends"
-                        description="Your complaints over the last 6 months"
-                        footer="Showing complaints by status"
-                        className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6 pb-12"
+                <h3 className="text-xs font-semibold text-slate-800">Resolved</h3>
+                <p className="text-xs text-slate-500 mt-1">Successfully closed</p>
+              </div>
+
+              <div className="bg-white/70 backdrop-blur-sm rounded-lg border border-white/50 p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center">
+                    <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                    </svg>
+                  </div>
+                  <span className="text-lg font-bold text-slate-800">
+                    {complaintTrends.length
+                      ? `${Math.round(
+                          (complaintTrends.reduce(
+                            (sum, item) => sum + item.resolved,
+                            0,
+                          ) /
+                            complaintTrends.reduce(
+                              (sum, item) => sum + item.total,
+                              0,
+                            )) *
+                            100,
+                        )}%`
+                      : "0%"}
+                  </span>
+                </div>
+                <h3 className="text-xs font-semibold text-slate-800">Response Rate</h3>
+                <p className="text-xs text-slate-500 mt-1">Resolution efficiency</p>
+              </div>
+            </div>
+
+            {/* Charts Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {/* Complaint Trends Chart */}
+              <div className="bg-white/70 backdrop-blur-sm rounded-lg border border-white/50 shadow-sm p-4">
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold text-slate-800">Complaint Trends</h3>
+                  <p className="text-xs text-slate-500 mt-1">Your complaints over the last 6 months</p>
+                </div>
+                <div className="h-64">
+                  {complaintTrends.length > 0 ? (
+                    <ResponsiveContainer width="100%" height={256}>
+                      <BarChart
+                        data={complaintTrends}
+                        margin={{
+                          top: 10,
+                          right: 12,
+                          left: 0,
+                          bottom: 60,
+                        }}
                       >
-                        <div className="h-[400px]">
-                          {complaintTrends.length > 0 ? (
-                            <ResponsiveContainer width="100%" height={400}>
-                              <BarChart
-                                data={complaintTrends}
-                                margin={{
-                                  top: 10,
-                                  right: 12,
-                                  left: 0,
-                                  bottom: 80,
-                                }}
-                              >
-                                <CartesianGrid
-                                  vertical={false}
-                                  stroke="#E8EFEA"
-                                />
-                                <XAxis
-                                  dataKey="month"
-                                  tickLine={false}
-                                  axisLine={false}
-                                  tickMargin={10}
-                                  fontSize={12}
-                                />
-                                <YAxis
-                                  tickLine={false}
-                                  axisLine={false}
-                                  tickMargin={8}
-                                  domain={[0, "auto"]}
-                                  fontSize={12}
-                                />
-                                <Tooltip content={<CustomTooltip />} />
-                                <Bar
-                                  dataKey="resolved"
-                                  fill="#1A3C34"
-                                  radius={4}
-                                  name="Resolved"
-                                />
-                                <Bar
-                                  dataKey="in_progress"
-                                  fill="#1E3A8A"
-                                  radius={4}
-                                  name="In Progress"
-                                />
-                              </BarChart>
-                            </ResponsiveContainer>
-                          ) : (
-                            <div className="h-[400px] flex items-center justify-center text-sm text-[#5C7361]">
-                              No complaint data available
-                            </div>
-                          )}
+                        <CartesianGrid
+                          vertical={false}
+                          stroke="#e2e8f0"
+                        />
+                        <XAxis
+                          dataKey="month"
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={10}
+                          fontSize={11}
+                        />
+                        <YAxis
+                          tickLine={false}
+                          axisLine={false}
+                          tickMargin={8}
+                          domain={[0, "auto"]}
+                          fontSize={11}
+                        />
+                        <Tooltip content={<CustomTooltip />} />
+                        <Bar
+                          dataKey="resolved"
+                          fill="#10b981"
+                          radius={4}
+                          name="Resolved"
+                        />
+                        <Bar
+                          dataKey="in_progress"
+                          fill="#3b82f6"
+                          radius={4}
+                          name="In Progress"
+                        />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  ) : (
+                    <div className="h-64 flex items-center justify-center">
+                      <div className="text-center">
+                        <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                          <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                          </svg>
                         </div>
-                      </ChartCard>
+                        <p className="text-slate-500 text-xs">No complaint data available</p>
+                      </div>
                     </div>
+                  )}
+                </div>
+              </div>
 
-                    {/* Side Elements */}
-                    <div className="md:col-span-2 lg:col-span-2 flex flex-col gap-6">
-                      <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6">
-                        <h3 className="text-lg font-medium text-[#2C3B2A] mb-4">
-                          Active Complaints
-                        </h3>
-                        <p className="text-2xl font-bold text-[#395917] mt-1">
-                          {activeComplaints}
-                        </p>
-                      </div>
-                      <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6">
-                        <h3 className="text-lg font-medium text-[#2C3B2A] mb-4">
-                          Messages Section
-                        </h3>
-                        <p className="text-sm text-[#5C7361] mb-4">
-                          Connect with other residents.
-                        </p>
-                        <button
-                          onClick={() => setCurrentPage("chat")}
-                          className="bg-[#395917] text-white px-4 py-2 rounded-lg hover:bg-[#2C3B2A] transition-colors w-full text-sm"
-                        >
-                          Go to Chat
-                        </button>
-                      </div>
-                      <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6">
-                        <h3 className="text-lg font-medium text-[#2C3B2A] mb-4">
-                          Visitors Section
-                        </h3>
-                        <p className="text-sm text-[#5C7361] mb-4">
-                          Manage your visitor registrations.
-                        </p>
-                        <button
-                          onClick={() => setCurrentPage("visitors")}
-                          className="bg-[#395917] text-white px-4 py-2 rounded-lg hover:bg-[#2C3B2A] transition-colors w-full text-sm"
-                        >
-                          Manage Visitors
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+              {/* Quick Actions Card */}
+              <div className="bg-white/70 backdrop-blur-sm rounded-lg border border-white/50 shadow-sm p-4">
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold text-slate-800">Quick Actions</h3>
+                  <p className="text-xs text-slate-500 mt-1">Common tasks and features</p>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <button
+                    onClick={() => setCurrentPage("rent")}
+                    className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white p-3 rounded-lg text-xs font-medium shadow-md transition-all"
+                  >
+                    Pay Rent
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage("complaints")}
+                    className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white p-3 rounded-lg text-xs font-medium shadow-md transition-all"
+                  >
+                    File Complaint
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage("visitors")}
+                    className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white p-3 rounded-lg text-xs font-medium shadow-md transition-all"
+                  >
+                    Manage Visitors
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage("community-hub")}
+                    className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white p-3 rounded-lg text-xs font-medium shadow-md transition-all"
+                  >
+                    Community Hub
+                  </button>
+                </div>
+              </div>
+            </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6">
-                      <h3 className="text-lg font-medium text-[#2C3B2A] mb-4">
-                        Quick Actions
-                      </h3>
-                      <div className="grid grid-cols-2 gap-4">
-                        <button
-                          onClick={() => setCurrentPage("rent")}
-                          className="bg-[#395917] text-white px-4 py-2 rounded-lg hover:bg-[#2C3B2A] transition-colors text-sm"
-                        >
-                          Pay Rent
-                        </button>
-                        <button
-                          onClick={() => setCurrentPage("complaints")}
-                          className="bg-[#395917] text-white px-4 py-2 rounded-lg hover:bg-[#2C3B2A] transition-colors text-sm"
-                        >
-                          File Complaint
-                        </button>
-                      </div>
-                    </div>
-                    <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6">
-                      <h3 className="text-lg font-medium text-[#2C3B2A] mb-4">
-                        Community Updates
-                      </h3>
-                      <p className="text-sm text-[#5C7361] mb-4">
-                        Check the community hub for latest updates.
-                      </p>
-                      <button
-                        onClick={() => setCurrentPage("community-hub")}
-                        className="bg-[#395917] text-white px-4 py-2 rounded-lg hover:bg-[#2C3B2A] transition-colors w-full text-sm"
-                      >
-                        View Community Hub
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
+            {/* Additional Features */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="bg-white/70 backdrop-blur-sm rounded-lg border border-white/50 shadow-sm p-4">
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold text-slate-800">Messages</h3>
+                  <p className="text-xs text-slate-500 mt-1">Connect with other residents</p>
+                </div>
+                <button
+                  onClick={() => setCurrentPage("chat")}
+                  className="w-full bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white px-4 py-2.5 rounded-lg text-sm font-medium shadow-md transition-all"
+                >
+                  Go to Chat
+                </button>
+              </div>
+              
+              <div className="bg-white/70 backdrop-blur-sm rounded-lg border border-white/50 shadow-sm p-4">
+                <div className="mb-4">
+                  <h3 className="text-lg font-semibold text-slate-800">Bill Management</h3>
+                  <p className="text-xs text-slate-500 mt-1">View and pay your utility bills</p>
+                </div>
+                <button
+                  onClick={() => setCurrentPage("bills")}
+                  className="w-full bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white px-4 py-2.5 rounded-lg text-sm font-medium shadow-md transition-all"
+                >
+                  Manage Bills
+                </button>
+              </div>
             </div>
           </div>
         );

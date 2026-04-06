@@ -8,8 +8,7 @@ const AdminReports = () => {
 
   useEffect(() => {
     const fetchResidentPayments = async () => {
-      try
-      {
+      try {
         const res = await api.get("/api/v1/residentPaymentsReport/");
         setResidentPayments(res.data || []);
         setError(null);
@@ -60,17 +59,13 @@ const AdminReports = () => {
             Loading payment report...
           </div>
         ) : error ? (
-          <div className="py-10 text-center text-red-600 text-sm">
-            {error}
-          </div>
+          <div className="py-10 text-center text-red-600 text-sm">{error}</div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
                 <tr className="bg-[#2C3B2A] text-white">
-                  <th className="px-4 py-3 text-left font-medium">
-                    Resident
-                  </th>
+                  <th className="px-4 py-3 text-left font-medium">Resident</th>
                   <th className="px-4 py-3 text-left font-medium">Room</th>
                   <th className="px-4 py-3 text-left font-medium">Date</th>
                   <th className="px-4 py-3 text-left font-medium">Period</th>

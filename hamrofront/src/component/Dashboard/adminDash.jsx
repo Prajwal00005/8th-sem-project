@@ -103,23 +103,22 @@ const AdminDashboard = () => {
         return <AdminReports />;
       default:
         return (
-          <div className="p-8 bg-[#F5F8F6]">
-            <div className="max-w-7xl mx-auto space-y-6">
-              <div>
-                <h2 className="text-2xl font-semibold text-[#2C3B2A]">
-                  Dashboard Overview
-                </h2>
-                <p className="text-[#5C7361] mt-1">
-                  Monitor resident feedback and trends
-                </p>
-              </div>
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-2xl font-semibold text-[#2C3B2A]">
+                Dashboard Overview
+              </h2>
+              <p className="text-[#5C7361] mt-1">
+                Monitor resident feedback and trends
+              </p>
+            </div>
 
-              {error ? (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center text-red-800">
-                  {error}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {error ? (
+              <div className="bg-red-50 border border-red-200 rounded-xl p-6 text-center text-red-800">
+                {error}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <ChartCard
                     title="Sentiment Trends"
                     description="Resident complaint sentiments over the last 6 months"
@@ -231,84 +230,83 @@ const AdminDashboard = () => {
                     )}
                   </ChartCard>
                 </div>
-              )}
+            )}
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6">
-                  <h3 className="text-lg font-medium text-[#2C3B2A]">
-                    Total Complaints
-                  </h3>
-                  <p className="text-3xl font-bold text-[#395917] mt-2">
-                    {complaintTrends.reduce(
-                      (sum, item) => sum + item.total,
-                      0,
-                    ) || 0}
-                  </p>
-                </div>
-                <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6">
-                  <h3 className="text-lg font-medium text-[#2C3B2A]">
-                    Resolved Complaints
-                  </h3>
-                  <p className="text-3xl font-bold text-[#395917] mt-2">
-                    {complaintTrends.reduce(
-                      (sum, item) => sum + item.resolved,
-                      0,
-                    ) || 0}
-                  </p>
-                </div>
-                <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6">
-                  <h3 className="text-lg font-medium text-[#2C3B2A]">
-                    Response Rate
-                  </h3>
-                  <p className="text-3xl font-bold text-[#395917] mt-2">
-                    {complaintTrends.length
-                      ? `${Math.round(
-                          (complaintTrends.reduce(
-                            (sum, item) => sum + item.resolved,
-                            0,
-                          ) /
-                            complaintTrends.reduce(
-                              (sum, item) => sum + item.total,
-                              0,
-                            )) *
-                            100,
-                        )}%`
-                      : "0%"}
-                  </p>
-                </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6">
+                <h3 className="text-lg font-medium text-[#2C3B2A]">
+                  Total Complaints
+                </h3>
+                <p className="text-3xl font-bold text-[#395917] mt-2">
+                  {complaintTrends.reduce(
+                    (sum, item) => sum + item.total,
+                    0,
+                  ) || 0}
+                </p>
               </div>
+              <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6">
+                <h3 className="text-lg font-medium text-[#2C3B2A]">
+                  Resolved Complaints
+                </h3>
+                <p className="text-3xl font-bold text-[#395917] mt-2">
+                  {complaintTrends.reduce(
+                    (sum, item) => sum + item.resolved,
+                    0,
+                  ) || 0}
+                </p>
+              </div>
+              <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6">
+                <h3 className="text-lg font-medium text-[#2C3B2A]">
+                  Response Rate
+                </h3>
+                <p className="text-3xl font-bold text-[#395917] mt-2">
+                  {complaintTrends.length
+                    ? `${Math.round(
+                        (complaintTrends.reduce(
+                          (sum, item) => sum + item.resolved,
+                          0,
+                        ) /
+                          complaintTrends.reduce(
+                            (sum, item) => sum + item.total,
+                            0,
+                          )) *
+                          100,
+                      )}%`
+                    : "0%"}
+                </p>
+              </div>
+            </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6">
-                  <h3 className="text-lg font-medium text-[#2C3B2A] mb-4">
-                    Quick Actions
-                  </h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <button
-                      onClick={() => setCurrentPage("complaints")}
-                      className="bg-[#395917] text-white px-4 py-2 rounded-lg hover:bg-[#2C3B2A] transition-colors"
-                    >
-                      View Complaints
-                    </button>
-                    <button
-                      onClick={() => setCurrentPage("userManagement")}
-                      className="bg-[#395917] text-white px-4 py-2 rounded-lg hover:bg-[#2C3B2A] transition-colors"
-                    >
-                      Manage Users
-                    </button>
-                  </div>
-                </div>
-                <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6">
-                  <h3 className="text-lg font-medium text-[#2C3B2A] mb-4">
-                    Payments
-                  </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6">
+                <h3 className="text-lg font-medium text-[#2C3B2A] mb-4">
+                  Quick Actions
+                </h3>
+                <div className="grid grid-cols-2 gap-4">
                   <button
-                    onClick={() => setCurrentPage("stripeSetup")}
-                    className="bg-[#395917] text-white px-4 py-2 rounded-lg hover:bg-[#2C3B2A] transition-colors w-full"
+                    onClick={() => setCurrentPage("complaints")}
+                    className="bg-[#395917] text-white px-4 py-2 rounded-lg hover:bg-[#2C3B2A] transition-colors"
                   >
-                    View Payment Setup
+                    View Complaints
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage("userManagement")}
+                    className="bg-[#395917] text-white px-4 py-2 rounded-lg hover:bg-[#2C3B2A] transition-colors"
+                  >
+                    Manage Users
                   </button>
                 </div>
+              </div>
+              <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6">
+                <h3 className="text-lg font-medium text-[#2C3B2A] mb-4">
+                  Payments
+                </h3>
+                <button
+                  onClick={() => setCurrentPage("stripeSetup")}
+                  className="bg-[#395917] text-white px-4 py-2 rounded-lg hover:bg-[#2C3B2A] transition-colors w-full"
+                >
+                  View Payment Setup
+                </button>
               </div>
             </div>
           </div>

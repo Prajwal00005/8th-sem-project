@@ -7,6 +7,9 @@ import {
   FiHome,
   FiSettings,
   FiBox,
+  FiTrendingUp,
+  FiLayers,
+  FiGrid,
 } from "react-icons/fi";
 import { BiMoney } from "react-icons/bi";
 import {
@@ -28,11 +31,12 @@ export const DashboardLayout = ({
   handleLogout,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const getIcon = (label) => {
     switch (label.toLowerCase()) {
       case "dashboard":
-        return <FiHome />;
+        return <FiTrendingUp />;
       case "settings":
         return <FiSettings />;
       case "profile":
@@ -64,76 +68,109 @@ export const DashboardLayout = ({
       case "reports":
         return <FaChartLine />;
       default:
-        return <FiBox />;
+        return <FiGrid />;
     }
   };
 
   return (
-    <div className="flex h-screen bg-gradient-to-br from-[#D8E3DC] to-[#C5D1C9]">
-      <aside
-        className={`${isCollapsed ? "w-20" : "w-64"} bg-[#2C3B2A] 
-                shadow-xl transition-all duration-300 flex flex-col`}
+    <div className="flex h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+        className="lg:hidden fixed top-4 left-4 z-50 p-3 bg-white rounded-xl border border-slate-200 hover:bg-slate-50 transition-all duration-300"
       >
-        <div className="p-6 text-2xl font-bold text-white/90 flex items-center justify-between">
-          {!isCollapsed && (title || "Dashboard")}
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="text-white/80 hover:text-white transition-colors"
-          >
-            {isCollapsed ? <FiMenu size={24} /> : <FiX size={24} />}
-          </button>
+        {isMobileMenuOpen ? <FiX size={20} /> : <FiMenu size={20} />}
+      </button>
+
+      {/* Sidebar */}
+      <div className={`${isCollapsed ? "w-20" : "w-72"} fixed lg:relative h-full bg-white/90 backdrop-blur-sm border-r border-slate-200 z-40 transition-all duration-300 flex flex-col overflow-hidden ${!isMobileMenuOpen && isCollapsed ? "lg:block hidden" : ""} ${isMobileMenuOpen ? "block" : "lg:block hidden"}`}>
+        {/* Header */}
+        <div className="p-6 border-b border-slate-200">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+                <FiLayers className="text-white text-lg" />
+              </div>
+              {!isCollapsed && (
+                <div>
+                  <h1 className="text-xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+                    {title || "Dashboard"}
+                  </h1>
+                  <p className="text-xs text-slate-500">Admin Panel</p>
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                setIsCollapsed(!isCollapsed);
+                setIsMobileMenuOpen(false);
+              }}
+              className="hidden lg:flex p-2 rounded-lg hover:bg-slate-100 transition-colors"
+            >
+              {isCollapsed ? <FiMenu size={18} /> : <FiX size={18} />}
+            </button>
+          </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-grow overflow-y-auto">
-          <ul className="space-y-2 mt-4">
+        <nav className="flex-1 p-4 overflow-y-auto">
+          <div className="space-y-1">
             {sidebarItems.map((item, index) => (
-              <li
+              <button
                 key={index}
-                onClick={() => setCurrentPage(item.page)}
-                className={`px-6 py-4 cursor-pointer flex items-center gap-4
-                                    ${
-                                      currentPage === item.page
-                                        ? "bg-white/20 text-white"
-                                        : "text-white/70 hover:bg-white/10 hover:text-white"
-                                    } transition-all duration-200`}
+                onClick={() => {
+                  setCurrentPage(item.page);
+                  setIsMobileMenuOpen(false);
+                }}
+                className={`w-full px-4 py-3 rounded-xl flex items-center gap-4 transition-all duration-200 ${
+                  currentPage === item.page
+                    ? "text-blue-600 bg-blue-50"
+                    : "text-slate-600 hover:bg-slate-100 hover:text-slate-800"
+                }`}
               >
-                <span className="text-xl">{getIcon(item.label)}</span>
-                {!isCollapsed && <span>{item.label}</span>}
-              </li>
+                <span className={`text-lg ${currentPage === item.page ? "text-blue-600" : "text-slate-400"}`}>
+                  {getIcon(item.label)}
+                </span>
+                {!isCollapsed && (
+                  <span className="font-medium">{item.label}</span>
+                )}
+              </button>
             ))}
-          </ul>
+          </div>
         </nav>
 
         {/* Bottom Section */}
-        <div className="border-t border-white/10 pt-4 mb-6">
-          <ul className="space-y-2">
-            <li
-              onClick={() => setCurrentPage("profile")}
-              className={`px-6 py-4 cursor-pointer flex items-center gap-4
-                                ${
-                                  currentPage === "profile"
-                                    ? "bg-white/20 text-white"
-                                    : "text-white/70 hover:bg-white/10 hover:text-white"
-                                } transition-all duration-200`}
-            >
-              <FiUser className="text-xl" />
-              {!isCollapsed && <span>Profile</span>}
-            </li>
-            <li
-              onClick={handleLogout}
-              className="px-6 py-4 cursor-pointer flex items-center gap-4 
-                            text-white/70 hover:bg-red-500/20 hover:text-red-100 transition-all duration-200"
-            >
-              <FiLogOut className="text-xl" />
-              {!isCollapsed && <span>Logout</span>}
-            </li>
-          </ul>
+        <div className="p-4 border-t border-slate-200 space-y-1">
+          <button
+            onClick={() => {
+              setCurrentPage("profile");
+              setIsMobileMenuOpen(false);
+            }}
+            className={`w-full px-4 py-3 rounded-xl flex items-center gap-4 transition-all duration-200 ${
+              currentPage === "profile"
+                ? "text-blue-600 bg-blue-50"
+                : "text-slate-600 hover:bg-slate-100 hover:text-slate-800"
+            }`}
+          >
+            <FiUser className={`text-lg ${currentPage === "profile" ? "text-blue-600" : "text-slate-400"}`} />
+            {!isCollapsed && <span className="font-medium">Profile</span>}
+          </button>
+          
+          <button
+            onClick={handleLogout}
+            className="w-full px-4 py-3 rounded-xl flex items-center gap-4 text-red-500 hover:bg-red-50 hover:text-red-600 transition-all duration-200"
+          >
+            <FiLogOut className="text-lg" />
+            {!isCollapsed && <span className="font-medium">Logout</span>}
+          </button>
         </div>
-      </aside>
+      </div>
 
-      <main className="flex-grow overflow-y-auto p-8 bg-white/30 backdrop-blur-sm">
-        <div className="max-w-7xl mx-auto">{renderContent()}</div>
+      {/* Main Content */}
+      <main className="flex-1 overflow-hidden">
+        <div className="h-full overflow-y-auto p-6 lg:p-8">
+          <div className="max-w-7xl mx-auto">{renderContent()}</div>
+        </div>
       </main>
     </div>
   );

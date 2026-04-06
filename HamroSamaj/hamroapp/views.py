@@ -97,6 +97,26 @@ def addAdmin(request):
         serializer = UserSerializer(data=data, context={'request': request})
         if serializer.is_valid():
             admin_user = serializer.save(password=make_password(data['password']))
+
+            # Automatically grant 1-year paid subscription when an apartment admin is first created
+            try:
+                from .models import AdminSubscriptionPayment
+
+                superadmin = User.objects.filter(role='superadmin').first()
+                if superadmin and admin_user.subscription_price and admin_user.subscription_price > 0:
+                    AdminSubscriptionPayment.objects.create(
+                        admin=admin_user,
+                        superadmin=superadmin,
+                        amount=admin_user.subscription_price,
+                        stripe_payment_id='INITIAL_ADMIN_CREATION',
+                        status='active',
+                        subscription_year=timezone.now().year,
+                        subscription_end_date=(timezone.now() + timedelta(days=365)).date()
+                    )
+            except Exception as sub_err:
+                # Log subscription auto-creation issues but do not block admin creation
+                print(f"Auto-subscription creation failed for new admin {admin_user.id}: {sub_err}")
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -833,7 +853,10 @@ class StripeConnectComplete(APIView):
 
 
 class PaymentListView(ListAPIView):
-    permission_classes = [IsAuthenticated, IsAdminUser]
+    # Only authenticated users with role 'admin' and a valid apartment
+    # can see this data. We enforce that in get_queryset, so a generic
+    # IsAuthenticated permission is enough here.
+    permission_classes = [IsAuthenticated]
     serializer_class = PaySerializer
 
     def get_queryset(self):
@@ -964,6 +987,36 @@ def residentBillDetail(request, bill_id):
         return Response({'error': 'Bill not found.'}, status=status.HTTP_404_NOT_FOUND)
 
     return Response(BillSerializer(bill).data)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def getAllResidentPaymentsReport(request):
+    """Report of resident rent/bill payments.
+
+    - Superadmin: sees all payments.
+    - Admin: sees payments only for their own apartment.
+    """
+    user = request.user
+
+    if getattr(user, 'role', None) == 'superadmin':
+        qs = Payment.objects.filter(
+            status__in=['paid', 'advance']
+        )
+    elif getattr(user, 'role', None) == 'admin':
+        qs = Payment.objects.filter(
+            admin=user,
+            status__in=['paid', 'advance']
+        )
+    else:
+        return Response(
+            {'error': 'Only admin or superadmin can view this report.'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    payments = qs.select_related('resident', 'room', 'admin')
+    serializer = PaySerializer(payments, many=True)
+    return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class createBillPaymentIntentView(APIView):
@@ -1478,6 +1531,54 @@ def getAdminSubscriptionPayments(request):
     serializer = AdminSubscriptionPaymentSerializer(payments, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
 
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated, IsSuperAdmin])
+def recordAdminCashSubscription(request, admin_id):
+    """Superadmin: record a manual (cash) 1-year subscription payment for an admin.
+
+    Creates a new AdminSubscriptionPayment with status active and
+    subscription_end_date one year from today. This is useful when
+    subscription was paid outside Stripe (cash/bank transfer).
+    """
+    try:
+        admin = User.objects.get(id=admin_id, role='admin')
+    except User.DoesNotExist:
+        return Response({'error': 'Admin not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    superadmin = request.user
+    if getattr(superadmin, 'role', None) != 'superadmin':
+        return Response({'error': 'Only superadmin can record manual payments'}, status=status.HTTP_403_FORBIDDEN)
+
+    # Use provided amount if given, otherwise fall back to admin.subscription_price
+    raw_amount = request.data.get('amount')
+    try:
+        amount = float(raw_amount) if raw_amount is not None else float(admin.subscription_price or 0)
+    except (TypeError, ValueError):
+        return Response({'error': 'Invalid amount.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if amount <= 0:
+        return Response({'error': 'Amount must be greater than 0.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    current_year = timezone.now().year
+    end_date = (timezone.now() + timedelta(days=365)).date()
+
+    payment = AdminSubscriptionPayment.objects.create(
+        admin=admin,
+        superadmin=superadmin,
+        amount=amount,
+        stripe_payment_id=f'CASH_{admin.id}_{timezone.now().strftime("%Y%m%d%H%M%S")}',
+        status='active',
+        subscription_year=current_year,
+        subscription_end_date=end_date,
+    )
+
+    serializer = AdminSubscriptionPaymentSerializer(payment)
+    return Response({
+        'message': 'Manual subscription recorded for 1 year',
+        'payment': serializer.data,
+    }, status=status.HTTP_201_CREATED)
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def checkSubscriptionDue(request):
@@ -1745,6 +1846,139 @@ def getSecurityPayments(request):
         payments = SecurityPayment.objects.filter(security=user).select_related('admin')
     serializer = SecurityPaymentSerializer(payments, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def recordSecurityCashPayment(request, security_id):
+    """Admin: record a manual (cash) yearly salary payment for a security user.
+
+    Creates a SecurityPayment with status 'success' and a payment_end_date
+    at the end of the given payment year (default: current year).
+    """
+    admin = request.user
+    if getattr(admin, 'role', None) != 'admin':
+        return Response({'error': 'Only admins can record manual security payments'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        security = User.objects.get(id=security_id, role='security', apartmentName=admin.apartmentName)
+    except User.DoesNotExist:
+        return Response({'error': 'Security user not found for your apartment'}, status=status.HTTP_404_NOT_FOUND)
+
+    # Determine payment year
+    raw_year = request.data.get('payment_year')
+    try:
+        payment_year = int(raw_year) if raw_year is not None else datetime.now().year
+    except (TypeError, ValueError):
+        return Response({'error': 'payment_year must be a valid year'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not security.salary or security.salary <= 0:  # type: ignore
+        return Response({'error': 'No valid salary set for this security user'}, status=status.HTTP_400_BAD_REQUEST)
+
+    existing = SecurityPayment.objects.filter(
+        admin=admin,
+        security=security,
+        payment_year=payment_year,
+        status='success',
+    )
+    if existing.exists():
+        return Response({'error': f'Salary for {payment_year} already recorded'}, status=status.HTTP_400_BAD_REQUEST)
+
+    amount = float(security.salary)  # type: ignore
+    period_start = datetime.strptime(f'{payment_year}-01-01', '%Y-%m-%d').date()
+    period_end = datetime.strptime(f'{payment_year}-12-31', '%Y-%m-%d').date()
+
+    payment = SecurityPayment.objects.create(
+        admin=admin,
+        security=security,
+        amount=amount,
+        stripe_payment_id=f'CASH_SEC_{security.id}_{timezone.now().strftime("%Y%m%d%H%M%S")}',
+        status='success',
+        payment_year=payment_year,
+        payment_end_date=period_end,
+    )
+
+    serializer = SecurityPaymentSerializer(payment)
+    return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def recordManualRentPayment(request, resident_id):
+    """Admin: record a manual (cash) rent payment for a resident.
+
+    Mirrors the period validation of card payments but directly creates
+    a Payment record with status 'paid' or 'advance'.
+    """
+    admin = request.user
+    if getattr(admin, 'role', None) != 'admin':
+        return Response({'error': 'Only admins can record manual rent payments'}, status=status.HTTP_403_FORBIDDEN)
+
+    try:
+        resident = User.objects.get(id=resident_id, role='resident', apartmentName=admin.apartmentName)
+    except User.DoesNotExist:
+        return Response({'error': 'Resident not found for your apartment'}, status=status.HTTP_404_NOT_FOUND)
+
+    try:
+        room = Room.objects.get(resident=resident, apartment=admin)
+    except Room.DoesNotExist:
+        return Response({'error': 'No room assigned to this resident in your apartment'}, status=status.HTTP_400_BAD_REQUEST)
+
+    period_from = request.data.get('period_from')
+    period_to = request.data.get('period_to')
+
+    if not all([period_from, period_to]):
+        return Response({'error': 'Please provide both start and end dates.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        from_date = datetime.strptime(period_from, '%Y-%m-%d').date()
+        to_date = datetime.strptime(period_to, '%Y-%m-%d').date()
+    except ValueError:
+        return Response({'error': 'Dates should be in YYYY-MM-DD format.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    days_covered = (to_date - from_date).days + 1
+    if days_covered <= 0:
+        return Response({'error': 'The end date must be after the start date.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if days_covered % 30 != 0:
+        suggested_to = from_date + timedelta(days=(days_covered // 30 + 1) * 30 - 1)
+        return Response({
+            'error': f'Please choose a period that’s a full 30 days (e.g., {from_date} to {suggested_to}). Current period is {days_covered} days.',
+            'suggested_period_to': suggested_to.strftime('%Y-%m-%d')
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    months_covered = days_covered // 30
+    if months_covered < 1:
+        return Response({'error': 'The period must cover at least 30 days.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    existing_payments = Payment.objects.filter(
+        resident=resident,
+        room=room,
+        period_from__lte=to_date,
+        period_to__gte=from_date
+    ).exclude(status='pending')
+    if existing_payments.exists():
+        return Response({
+            'error': f'This period ({from_date} to {to_date}) overlaps with an existing payment.'
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+    amount = float(room.monthly_rent) * months_covered
+    today = timezone.now().date()
+    status_value = 'paid' if to_date <= today else 'advance'
+
+    payment = Payment.objects.create(
+        resident=resident,
+        admin=admin,
+        room=room,
+        period_from=from_date,
+        period_to=to_date,
+        amount=amount,
+        stripe_payment_id=f'CASH_RENT_{resident.id}_{timezone.now().strftime("%Y%m%d%H%M%S")}',
+        status=status_value,
+    )
+
+    serializer = PaySerializer(payment)
+    return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

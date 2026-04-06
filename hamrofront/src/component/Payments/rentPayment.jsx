@@ -268,6 +268,52 @@ const RentPayment = () => {
       : 1;
   const totalAmount = monthlyRent * monthsCovered;
 
+  const fillPeriodFromReminderOrHistory = () => {
+    let fromDate = null;
+    let toDate = null;
+
+    // 1) If backend already tells us a due_date, use that as period_to
+    if (paymentReminder && paymentReminder.due_date) {
+      const due = new Date(paymentReminder.due_date);
+      if (!isNaN(due.getTime())) {
+        toDate = due;
+        const start = new Date(due);
+        start.setDate(start.getDate() - 29);
+        fromDate = start;
+      }
+    }
+
+    // 2) Fallback: if we have history but no reminder date, start after last period
+    if ((!fromDate || !toDate) && paymentHistory && paymentHistory.length > 0) {
+      const latest = paymentHistory.reduce((latest, current) => {
+        if (!latest) return current;
+        const latestDate = new Date(latest.period_to || latest.created_at);
+        const currentDate = new Date(current.period_to || current.created_at);
+        return currentDate > latestDate ? current : latest;
+      }, null);
+
+      if (latest?.period_to) {
+        const start = new Date(latest.period_to);
+        start.setDate(start.getDate() + 1);
+        const end = new Date(start);
+        end.setDate(end.getDate() + 29);
+        fromDate = start;
+        toDate = end;
+      }
+    }
+
+    if (!fromDate || !toDate) return;
+
+    const fromStr = fromDate.toISOString().split("T")[0];
+    const toStr = toDate.toISOString().split("T")[0];
+
+    setPaymentDetails({
+      ...currentDetails,
+      period_from: fromStr,
+      period_to: toStr,
+    });
+  };
+
   return (
     <div className="p-8 bg-[#F5F8F6]">
       {loading && (
@@ -291,7 +337,10 @@ const RentPayment = () => {
             </p>
           </div>
           <Button
-            onClick={() => setShowPaymentForm(true)}
+            onClick={() => {
+              fillPeriodFromReminderOrHistory();
+              setShowPaymentForm(true);
+            }}
             className="bg-[#395917] hover:bg-[#2C3B2A] text-white px-6 py-3 rounded-lg"
           >
             Make Payment

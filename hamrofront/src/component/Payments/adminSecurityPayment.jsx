@@ -81,8 +81,7 @@ const AdminSecurityPayment = () => {
       ];
 
     return (
-        <div className="p-8 bg-[#F5F8F6]">
-            <div className="max-w-7xl mx-auto space-y-6">
+        <div className="space-y-6">
                 {/* Header Section */}
                 <div className="flex justify-between items-center mb-8">
                     <div>
@@ -220,7 +219,6 @@ const AdminSecurityPayment = () => {
                         </Elements>
                     </div>
                 )}
-            </div>
         </div>
     );
 };

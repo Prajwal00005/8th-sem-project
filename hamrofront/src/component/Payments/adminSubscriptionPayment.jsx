@@ -109,10 +109,9 @@ const AdminSubscriptionPayment = () => {
   ];
 
   return (
-    <div className="p-8 bg-[#F5F8F6]">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header Section */}
-        <div className="flex justify-between items-center mb-8">
+    <div className="space-y-6">
+      {/* Header Section */}
+      <div className="flex justify-between items-center mb-8">
           <div>
             <h2 className="text-2xl font-semibold text-[#2C3B2A]">
               Subscription Payment
@@ -132,182 +131,181 @@ const AdminSubscriptionPayment = () => {
           )}
         </div>
 
-        {/* Error Alert */}
-        {error && (
-          <Alert variant="error" className="mb-6 rounded-xl">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+      {/* Error Alert */}
+      {error && (
+        <Alert variant="error" className="mb-6 rounded-xl">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
-        {/* Reminder Section */}
-        {showReminder &&
-          subscriptionReminder &&
-          subscriptionReminder.reminder !==
-            "No subscription payments due within the next 7 days." && (
-            <div className="bg-white border border-[#E8EFEA] rounded-xl p-6 shadow-sm flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-[#2C3B2A]">
-                  {subscriptionReminder.reminder}
-                </p>
-                <p className="text-xs text-[#5C7361]">
-                  Due: {subscriptionReminder.due_date} (
-                  {subscriptionReminder.days_until_due} days left)
-                </p>
-              </div>
-              <Button
-                onClick={() => setShowReminder(false)}
-                variant="secondary"
-                icon={X}
-                className="p-2 hover:bg-[#E8EFEA]"
-              />
-            </div>
-          )}
-
-        {/* Subscription Details and Payment History */}
-        {!showPaymentForm && (
-          <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] overflow-hidden">
-            <div className="px-8 py-6">
-              <h3 className="text-xl font-semibold text-[#2C3B2A] mb-4">
-                Subscription Details
-              </h3>
-              <p className="text-base text-[#5C7361] mb-4">
-                Yearly Subscription Price: ₹{subscriptionPrice}
+      {/* Reminder Section */}
+      {showReminder &&
+        subscriptionReminder &&
+        subscriptionReminder.reminder !==
+          "No subscription payments due within the next 7 days." && (
+          <div className="bg-white border border-[#E8EFEA] rounded-xl p-6 shadow-sm flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-[#2C3B2A]">
+                {subscriptionReminder.reminder}
               </p>
-              {hasActiveSubscription ? (
-                <div className="mb-4">
-                  <p className="text-base font-medium text-[#395917]">
-                    Your subscription for {currentYear} is active.
-                  </p>
-                  {subscriptionPayments.find(
-                    (p) =>
-                      p.subscription_year === currentYear &&
-                      p.status === "active",
-                  )?.subscription_end_date && (
-                    <p className="text-sm text-[#10bb35]">
-                      Valid until:{" "}
-                      {new Date(
-                        subscriptionPayments.find(
-                          (p) =>
-                            p.subscription_year === currentYear &&
-                            p.status === "active",
-                        ).subscription_end_date,
-                      ).toLocaleDateString()}
-                    </p>
-                  )}
-                </div>
-              ) : (
-                <Button
-                  onClick={handlePaySubscription}
-                  className="bg-[#395917] hover:bg-[#2C3B2A] text-white px-6 py-2.5 rounded-lg"
-                  disabled={!subscriptionPrice || subscriptionPrice <= 0}
-                >
-                  Pay Subscription
-                </Button>
-              )}
+              <p className="text-xs text-[#5C7361]">
+                Due: {subscriptionReminder.due_date} (
+                {subscriptionReminder.days_until_due} days left)
+              </p>
             </div>
+            <Button
+              onClick={() => setShowReminder(false)}
+              variant="secondary"
+              icon={X}
+              className="p-2 hover:bg-[#E8EFEA]"
+            />
+          </div>
+        )}
 
-            <div className="border-t border-[#E8EFEA]">
-              <div className="flex justify-between items-center px-8 py-4 bg-[#E8EFEA] text-[#2C3B2A]">
-                <h3 className="text-xl font-semibold">Payment History</h3>
-                <PaymentHistoryPDF
-                  title="Subscription Payment History"
-                  data={subscriptionPayments}
-                  columns={columns}
-                  filename="admin_subscription_payment_history"
-                />
-              </div>
-              {subscriptionPayments.length === 0 ? (
-                <p className="text-[#5C7361] px-8 py-8">
-                  No payment history available.
+      {/* Subscription Details and Payment History */}
+      {!showPaymentForm && (
+        <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] overflow-hidden">
+          <div className="px-8 py-6">
+            <h3 className="text-xl font-semibold text-[#2C3B2A] mb-4">
+              Subscription Details
+            </h3>
+            <p className="text-base text-[#5C7361] mb-4">
+              Yearly Subscription Price: ₹{subscriptionPrice}
+            </p>
+            {hasActiveSubscription ? (
+              <div className="mb-4">
+                <p className="text-base font-medium text-[#395917]">
+                  Your subscription for {currentYear} is active.
                 </p>
-              ) : (
-                <table className="w-full">
-                  <thead>
-                    <tr className="bg-[#F5F8F6] text-[#2C3B2A]">
-                      <th className="px-8 py-4 text-left font-medium text-base">
-                        Date
-                      </th>
-                      <th className="px-8 py-4 text-left font-medium text-base">
-                        Amount
-                      </th>
-                      <th className="px-8 py-4 text-left font-medium text-base">
-                        Subscription Year
-                      </th>
-                      <th className="px-8 py-4 text-left font-medium text-base">
-                        Status
-                      </th>
-                      <th className="px-8 py-4 text-left font-medium text-base">
-                        End Date
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-[#E8EFEA]">
-                    {subscriptionPayments.map((payment) => (
-                      <tr
-                        key={payment.id}
-                        className="hover:bg-[#F5F8F6] transition-colors"
-                      >
-                        <td className="px-8 py-5 text-base text-[#2C3B2A]">
-                          {new Date(payment.created_at).toLocaleDateString()}
-                        </td>
-                        <td className="px-8 py-5 text-base text-[#2C3B2A]">
-                          ₹{payment.amount}
-                        </td>
-                        <td className="px-8 py-5 text-base text-[#2C3B2A]">
-                          {payment.subscription_year}
-                        </td>
-                        <td className="px-8 py-5 text-base">
-                          <span
-                            className={`px-2 py-1 rounded-full text-xs ${
-                              payment.status === "active"
-                                ? "bg-green-100 text-green-800"
-                                : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {payment.status}
-                          </span>
-                        </td>
-                        <td className="px-8 py-5 text-base text-[#2C3B2A]">
-                          {payment.subscription_end_date
-                            ? new Date(
-                                payment.subscription_end_date,
-                              ).toLocaleDateString()
-                            : "N/A"}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
+                {subscriptionPayments.find(
+                  (p) =>
+                    p.subscription_year === currentYear &&
+                    p.status === "active",
+                )?.subscription_end_date && (
+                  <p className="text-sm text-[#10bb35]">
+                    Valid until: {" "}
+                    {new Date(
+                      subscriptionPayments.find(
+                        (p) =>
+                          p.subscription_year === currentYear &&
+                          p.status === "active",
+                      ).subscription_end_date,
+                    ).toLocaleDateString()}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <Button
+                onClick={handlePaySubscription}
+                className="bg-[#395917] hover:bg-[#2C3B2A] text-white px-6 py-2.5 rounded-lg"
+                disabled={!subscriptionPrice || subscriptionPrice <= 0}
+              >
+                Pay Subscription
+              </Button>
+            )}
           </div>
-        )}
 
-        {/* Payment Form Modal */}
-        {showPaymentForm && clientSecret && (
-          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
-            <Elements
-              stripe={stripePromise}
-              options={{
-                clientSecret,
-                appearance: {
-                  theme: "stripe",
-                  variables: { colorPrimary: "#395917" },
-                },
-              }}
-            >
-              <SubscriptionPaymentForm
-                paymentDetails={paymentDetails}
-                onClose={() => {
-                  setShowPaymentForm(false);
-                  fetchSubscriptionPayments();
-                }}
-                clientSecret={clientSecret}
+          <div className="border-t border-[#E8EFEA]">
+            <div className="flex justify-between items-center px-8 py-4 bg-[#E8EFEA] text-[#2C3B2A]">
+              <h3 className="text-xl font-semibold">Payment History</h3>
+              <PaymentHistoryPDF
+                title="Subscription Payment History"
+                data={subscriptionPayments}
+                columns={columns}
+                filename="admin_subscription_payment_history"
               />
-            </Elements>
+            </div>
+            {subscriptionPayments.length === 0 ? (
+              <p className="text-[#5C7361] px-8 py-8">
+                No payment history available.
+              </p>
+            ) : (
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-[#F5F8F6] text-[#2C3B2A]">
+                    <th className="px-8 py-4 text-left font-medium text-base">
+                      Date
+                    </th>
+                    <th className="px-8 py-4 text-left font-medium text-base">
+                      Amount
+                    </th>
+                    <th className="px-8 py-4 text-left font-medium text-base">
+                      Subscription Year
+                    </th>
+                    <th className="px-8 py-4 text-left font-medium text-base">
+                      Status
+                    </th>
+                    <th className="px-8 py-4 text-left font-medium text-base">
+                      End Date
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E8EFEA]">
+                  {subscriptionPayments.map((payment) => (
+                    <tr
+                      key={payment.id}
+                      className="hover:bg-[#F5F8F6] transition-colors"
+                    >
+                      <td className="px-8 py-5 text-base text-[#2C3B2A]">
+                        {new Date(payment.created_at).toLocaleDateString()}
+                      </td>
+                      <td className="px-8 py-5 text-base text-[#2C3B2A]">
+                        ₹{payment.amount}
+                      </td>
+                      <td className="px-8 py-5 text-base text-[#2C3B2A]">
+                        {payment.subscription_year}
+                      </td>
+                      <td className="px-8 py-5 text-base">
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs ${
+                            payment.status === "active"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-red-100 text-red-800"
+                          }`}
+                        >
+                          {payment.status}
+                        </span>
+                      </td>
+                      <td className="px-8 py-5 text-base text-[#2C3B2A]">
+                        {payment.subscription_end_date
+                          ? new Date(
+                              payment.subscription_end_date,
+                            ).toLocaleDateString()
+                          : "N/A"}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Payment Form Modal */}
+      {showPaymentForm && clientSecret && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
+          <Elements
+            stripe={stripePromise}
+            options={{
+              clientSecret,
+              appearance: {
+                theme: "stripe",
+                variables: { colorPrimary: "#395917" },
+              },
+            }}
+          >
+            <SubscriptionPaymentForm
+              paymentDetails={paymentDetails}
+              onClose={() => {
+                setShowPaymentForm(false);
+                fetchSubscriptionPayments();
+              }}
+              clientSecret={clientSecret}
+            />
+          </Elements>
+        </div>
+      )}
     </div>
   );
 };

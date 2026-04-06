@@ -92,167 +92,166 @@ export default function BlogManagement() {
   }
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h2 className="text-2xl font-semibold text-[#2C3B2A]">
-              Blog Management
-            </h2>
-            <p className="text-[#5C7361] mt-1">
-              Create and manage blog posts for your community
-            </p>
+    <div className="space-y-8 p-6 lg:p-8">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+            Blog Management
+          </h1>
+          <p className="text-slate-500 mt-1">
+            Create and manage blog posts for your community
+          </p>
+        </div>
+      </div>
+
+      {/* Error Alert */}
+      {error && (
+        <div className="bg-red-50/80 backdrop-blur-sm border border-red-200/60 rounded-2xl p-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p className="text-red-800 font-medium">{error}</p>
           </div>
         </div>
+      )}
 
-        {/* Error Alert */}
-        {error && (
-          <Alert
-            variant="error"
-            className="mb-6 rounded-xl bg-red-50 text-red-900"
-          >
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {/* Blog Form */}
-        <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-8">
-          <h3 className="text-xl font-semibold text-[#2C3B2A] mb-6">
-            {editingId ? "Edit Blog" : "Create Blog"}
-          </h3>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <label className="block text-sm text-[#5C7361] mb-2">Title</label>
-              <Input
-                type="text"
-                value={formData.title}
-                onChange={(e) =>
-                  setFormData({ ...formData, title: e.target.value })
-                }
-                className="w-full text-base px-4 py-3 border border-[#E8EFEA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#395917] transition-colors"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-[#5C7361] mb-2">
-                Content
-              </label>
-              <textarea
-                value={formData.content}
-                onChange={(e) =>
-                  setFormData({ ...formData, content: e.target.value })
-                }
-                className="w-full text-base px-4 py-3 border border-[#E8EFEA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#395917] transition-colors h-32"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-[#5C7361] mb-2">Image</label>
+      {/* Blog Form */}
+      <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-8">
+        <h3 className="text-xl font-semibold text-slate-800 mb-6">
+          {editingId ? "Edit Blog" : "Create Blog"}
+        </h3>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Title</label>
+            <Input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              className="w-full border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Content</label>
+            <textarea
+              value={formData.content}
+              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+              className="w-full bg-white border border-slate-200 text-slate-700 px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 resize-none h-32"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">Image</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setFormData({ ...formData, image: e.target.files[0] })}
+              className="w-full bg-white border border-slate-200 text-slate-700 px-4 py-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              required={!editingId}
+            />
+          </div>
+          <div>
+            <label className="flex items-center gap-3">
               <input
-                type="file"
-                accept="image/*"
-                onChange={(e) =>
-                  setFormData({ ...formData, image: e.target.files[0] })
-                }
-                className="w-full text-base px-4 py-3 border border-[#E8EFEA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#395917] transition-colors"
-                required
+                type="checkbox"
+                checked={formData.is_published}
+                onChange={(e) => setFormData({ ...formData, is_published: e.target.checked })}
+                className="w-5 h-5 border border-slate-300 rounded-md text-blue-600 focus:ring-blue-500"
               />
-            </div>
-            <div>
-              <label className="flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={formData.is_published}
-                  onChange={(e) =>
-                    setFormData({ ...formData, is_published: e.target.checked })
-                  }
-                  className="w-5 h-5 border border-[#E8EFEA] rounded-md text-[#395917] focus:ring-[#395917] transition-colors"
-                />
-                <span className="text-sm text-[#5C7361]">Publish</span>
-              </label>
-            </div>
-            <div className="flex gap-4">
+              <span className="text-sm text-slate-700">Publish</span>
+            </label>
+          </div>
+          <div className="flex gap-4">
+            <Button
+              type="submit"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl shadow-lg shadow-blue-500/25"
+            >
+              {editingId ? "Update Blog" : "Create Blog"}
+            </Button>
+            {editingId && (
               <Button
-                type="submit"
-                className="bg-[#395917] hover:bg-[#2C3B2A] text-white px-6 py-2.5 rounded-lg"
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setFormData({
+                    title: "",
+                    content: "",
+                    image: null,
+                    is_published: false,
+                  });
+                  setEditingId(null);
+                }}
+                className="border-slate-200 hover:bg-slate-50 text-slate-700 px-6 py-3 rounded-xl"
               >
-                {editingId ? "Update Blog" : "Create Blog"}
+                Cancel
               </Button>
-              {editingId && (
-                <Button
-                  type="button"
-                  variant="secondary"
-                  onClick={() => {
-                    setFormData({
-                      title: "",
-                      content: "",
-                      image: "",
-                      is_published: false,
-                    });
-                    setEditingId(null);
-                  }}
-                  className="bg-transparent border border-[#2C3B2A] text-[#2C3B2A] hover:bg-[#21330e] hover:text-white px-6 py-2.5 rounded-lg"
-                >
-                  Cancel
-                </Button>
-              )}
-            </div>
-          </form>
-        </div>
+            )}
+          </div>
+        </form>
+      </div>
 
-        {/* Blog List */}
-        <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-8">
-          <h3 className="text-xl font-semibold text-[#2C3B2A] mb-6">
-            Blog Posts
-          </h3>
-          {blogs.length === 0 ? (
-            <p className="text-[#5C7361] py-8">No blogs available.</p>
-          ) : (
-            <div className="space-y-4">
-              {blogs.map((blog) => (
-                <div
-                  key={blog.id}
-                  className="flex justify-between items-start p-6 border border-[#E8EFEA] rounded-lg hover:bg-[#F5F8F6] transition-colors"
-                >
+      {/* Blog List */}
+      <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-8">
+        <h3 className="text-xl font-semibold text-slate-800 mb-6">Blog Posts</h3>
+        {blogs.length === 0 ? (
+          <div className="text-center py-16">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+              </svg>
+            </div>
+            <p className="text-slate-500 text-lg">No blogs available.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {blogs.map((blog) => (
+              <div
+                key={blog.id}
+                className="bg-white/50 rounded-2xl p-6 border border-slate-200 hover:shadow-lg transition-all duration-300"
+              >
+                <div className="space-y-4">
                   <div>
-                    <h4 className="text-base font-medium text-[#2C3B2A]">
-                      {blog.title}
-                    </h4>
-                    <p className="text-sm text-[#5C7361] mt-1">
+                    <h4 className="text-lg font-semibold text-slate-800">{blog.title}</h4>
+                    <p className="text-sm text-slate-600 mt-2 line-clamp-3">
                       {blog.content.substring(0, 100)}...
                     </p>
+                  </div>
+                  <div className="flex items-center justify-between">
                     <span
-                      className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium mt-2 ${
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${
                         blog.is_published
                           ? "bg-green-100 text-green-800"
-                          : "bg-red-100 text-red-800"
+                          : "bg-amber-100 text-amber-800"
                       }`}
                     >
                       {blog.is_published ? "Published" : "Draft"}
                     </span>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => handleEdit(blog)}
-                      variant="secondary"
-                      className="bg-transparent border border-[#2C3B2A] text-[#2C3B2A] hover:bg-[#21330e] hover:text-white px-4 py-1.5 rounded-lg text-sm"
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      onClick={() => handleDelete(blog.id)}
-                      variant="secondary"
-                      className="bg-transparent border border-red-600 text-red-600 hover:bg-red-600 hover:text-white px-4 py-1.5 rounded-lg text-sm"
-                    >
-                      Delete
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={() => handleEdit(blog)}
+                        variant="secondary"
+                        className="px-3 py-1.5 text-xs border-slate-200 hover:bg-slate-50 text-slate-700"
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        onClick={() => handleDelete(blog.id)}
+                        variant="secondary"
+                        className="px-3 py-1.5 text-xs border-red-200 hover:bg-red-50 text-red-600"
+                      >
+                        Delete
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

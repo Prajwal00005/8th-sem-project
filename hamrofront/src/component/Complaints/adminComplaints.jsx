@@ -42,12 +42,12 @@ export default function AdminComplaints() {
     };
 
     if (loading) return (
-        <div className="flex items-center justify-center min-h-screen text-[#2C3B2A] bg-[#F5F8F6]">
+        <div className="flex items-center justify-center text-[#2C3B2A]">
             <span className="animate-pulse">Loading...</span>
         </div>
     );
     if (error) return (
-        <div className="flex items-center justify-center min-h-screen text-red-700 bg-[#F5F8F6]">
+        <div className="flex items-center justify-center text-red-700">
             {error}
         </div>
     );
@@ -147,105 +147,103 @@ export default function AdminComplaints() {
 
 
     return (
-        <div className="p-8 bg-[#F5F8F6] min-h-screen">
-            <div className="max-w-7xl mx-auto space-y-8">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <h2 className="text-2xl font-medium text-[#2C3B2A]">Complaints Management</h2>
-                        <p className="text-md text-[#5C7361] mt-2">Handle resident complaints and submit issues to superadmin</p>
-                    </div>
-                    <button
-                        onClick={() => setShowComplaintForm(true)}
-                        className="bg-[#395917] hover:bg-[#2C3B2A] text-white px-6 py-3 rounded-lg font-semibold shadow-md transition-all duration-200"
-                    >
-                        New Complaint
-                    </button>
+        <div className="space-y-8">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h2 className="text-2xl font-medium text-[#2C3B2A]">Complaints Management</h2>
+                    <p className="text-md text-[#5C7361] mt-2">Handle resident complaints and submit issues to superadmin</p>
                 </div>
+                <button
+                    onClick={() => setShowComplaintForm(true)}
+                    className="bg-[#395917] hover:bg-[#2C3B2A] text-white px-6 py-3 rounded-lg font-semibold shadow-md transition-all duration-200"
+                >
+                    New Complaint
+                </button>
+            </div>
 
-                <div className="flex gap-4">
-                    <button
-                        onClick={() => setActiveTab('resident')}
-                        className={`px-6 py-2 rounded-lg font-semibold transition-all duration-200 shadow-sm ${
-                            activeTab === 'resident' ? 'bg-[#395917] text-white' : 'bg-[#E8EFEA] text-[#2C3B2A] hover:bg-[#D8E3DC]'
-                        }`}
-                    >
-                        Resident Complaints
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('history')}
-                        className={`px-6 py-2 rounded-lg font-semibold transition-all duration-200 shadow-sm ${
-                            activeTab === 'history' ? 'bg-[#395917] text-white' : 'bg-[#E8EFEA] text-[#2C3B2A] hover:bg-[#D8E3DC]'
-                        }`}
-                    >
-                        My Complaint History
-                    </button>
+            <div className="flex gap-4">
+                <button
+                    onClick={() => setActiveTab('resident')}
+                    className={`px-6 py-2 rounded-lg font-semibold transition-all duration-200 shadow-sm ${
+                        activeTab === 'resident' ? 'bg-[#395917] text-white' : 'bg-[#E8EFEA] text-[#2C3B2A] hover:bg-[#D8E3DC]'
+                    }`}
+                >
+                    Resident Complaints
+                </button>
+                <button
+                    onClick={() => setActiveTab('history')}
+                    className={`px-6 py-2 rounded-lg font-semibold transition-all duration-200 shadow-sm ${
+                        activeTab === 'history' ? 'bg-[#395917] text-white' : 'bg-[#E8EFEA] text-[#2C3B2A] hover:bg-[#D8E3DC]'
+                    }`}
+                >
+                    My Complaint History
+                </button>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-md border border-[#E8EFEA] overflow-hidden">
+                <div className="p-6 bg-[#F5F8F6] border-b border-[#E8EFEA]">
+                    <h3 className="text-xl font-semibold text-[#2C3B2A]">
+                        {activeTab === 'resident' ? 'Resident Complaints' : 'My Complaint History'}
+                    </h3>
                 </div>
+                {activeTab === 'resident' ? renderComplaintList(residentComplaints, 'resident') : renderComplaintList(adminComplaints, 'admin')}
+            </div>
 
-                <div className="bg-white rounded-xl shadow-md border border-[#E8EFEA] overflow-hidden">
-                    <div className="p-6 bg-[#F5F8F6] border-b border-[#E8EFEA]">
-                        <h3 className="text-xl font-semibold text-[#2C3B2A]">
-                            {activeTab === 'resident' ? 'Resident Complaints' : 'My Complaint History'}
-                        </h3>
-                    </div>
-                    {activeTab === 'resident' ? renderComplaintList(residentComplaints, 'resident') : renderComplaintList(adminComplaints, 'admin')}
-                </div>
+            {userRole === 'admin' && activeTab === 'resident' }
 
-                {userRole === 'admin' && activeTab === 'resident' }
-
-                {showComplaintForm && (
-                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
-                        <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 p-8 transform transition-all duration-300 scale-100">
-                            <div className="flex justify-between items-center mb-6">
-                                <h3 className="text-2xl font-bold text-[#2C3B2A]">Submit a New Complaint</h3>
+            {showComplaintForm && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50">
+                    <div className="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 p-8 transform transition-all duration-300 scale-100">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-2xl font-bold text-[#2C3B2A]">Submit a New Complaint</h3>
+                            <button
+                                onClick={() => setShowComplaintForm(false)}
+                                className="p-2 hover:bg-[#E8EFEA] rounded-full transition-all duration-200"
+                            >
+                                <X className="h-6 w-6 text-[#2C3B2A]" />
+                            </button>
+                        </div>
+                        <form onSubmit={handleFormSubmit} className="space-y-6">
+                            <div>
+                                <label className="block text-sm font-medium text-[#2C3B2A] mb-2">Subject</label>
+                                <input
+                                    type="text"
+                                    value={newComplaint.subject || ''}
+                                    onChange={(e) => setNewComplaint({ subject: e.target.value })}
+                                    placeholder="Enter subject"
+                                    className="w-full bg-[#F5F8F6] border border-[#E8EFEA] text-[#2C3B2A] px-4 py-3 rounded-lg focus:outline-none focus:border-[#5C7361] transition-all duration-200 shadow-sm"
+                                    required
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-[#2C3B2A] mb-2">Description</label>
+                                <textarea
+                                    value={newComplaint.description || ''}
+                                    onChange={(e) => setNewComplaint({ description: e.target.value })}
+                                    placeholder="Describe your issue"
+                                    className="w-full bg-[#F5F8F6] border border-[#E8EFEA] text-[#2C3B2A] px-4 py-3 rounded-lg focus:outline-none focus:border-[#5C7361] transition-all duration-200 h-32 resize-none shadow-sm"
+                                    required
+                                />
+                            </div>
+                            <div className="flex justify-end gap-4">
                                 <button
+                                    type="button"
                                     onClick={() => setShowComplaintForm(false)}
-                                    className="p-2 hover:bg-[#E8EFEA] rounded-full transition-all duration-200"
+                                    className="px-6 py-2 rounded-lg text-[#2C3B2A] hover:bg-[#E8EFEA] font-semibold transition-all duration-200 shadow-sm"
                                 >
-                                    <X className="h-6 w-6 text-[#2C3B2A]" />
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="bg-[#395917] hover:bg-[#2C3B2A] text-white px-6 py-2 rounded-lg font-semibold shadow-md transition-all duration-200"
+                                >
+                                    Submit Complaint
                                 </button>
                             </div>
-                            <form onSubmit={handleFormSubmit} className="space-y-6">
-                                <div>
-                                    <label className="block text-sm font-medium text-[#2C3B2A] mb-2">Subject</label>
-                                    <input
-                                        type="text"
-                                        value={newComplaint.subject || ''}
-                                        onChange={(e) => setNewComplaint({ subject: e.target.value })}
-                                        placeholder="Enter subject"
-                                        className="w-full bg-[#F5F8F6] border border-[#E8EFEA] text-[#2C3B2A] px-4 py-3 rounded-lg focus:outline-none focus:border-[#5C7361] transition-all duration-200 shadow-sm"
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-[#2C3B2A] mb-2">Description</label>
-                                    <textarea
-                                        value={newComplaint.description || ''}
-                                        onChange={(e) => setNewComplaint({ description: e.target.value })}
-                                        placeholder="Describe your issue"
-                                        className="w-full bg-[#F5F8F6] border border-[#E8EFEA] text-[#2C3B2A] px-4 py-3 rounded-lg focus:outline-none focus:border-[#5C7361] transition-all duration-200 h-32 resize-none shadow-sm"
-                                        required
-                                    />
-                                </div>
-                                <div className="flex justify-end gap-4">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowComplaintForm(false)}
-                                        className="px-6 py-2 rounded-lg text-[#2C3B2A] hover:bg-[#E8EFEA] font-semibold transition-all duration-200 shadow-sm"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        className="bg-[#395917] hover:bg-[#2C3B2A] text-white px-6 py-2 rounded-lg font-semibold shadow-md transition-all duration-200"
-                                    >
-                                        Submit Complaint
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
+                        </form>
                     </div>
-                )}
-            </div>
+                </div>
+            )}
         </div>
     );
 }

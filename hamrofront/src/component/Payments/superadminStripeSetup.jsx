@@ -86,141 +86,127 @@ const SuperadminStripeSetup = () => {
   const filteredHistory = getFilteredHistory();
 
   return (
-    <div className="p-8 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {error && (
-          <Alert
-            variant="error"
-            className="mb-4 bg-red-50 text-red-900 rounded-xl"
-          >
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+    <div className="space-y-4 p-4">
+      {/* Header Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-xl lg:text-2xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+            Payment Settings
+          </h1>
+          <p className="text-slate-500 mt-1 text-sm">
+            Manage your payment gateway and view admin subscription payments
+          </p>
+        </div>
+      </div>
 
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h2 className="text-2xl font-semibold text-[#2C3B2A]">
-              Payment Settings
-            </h2>
-            <p className="text-[#5C7361] mt-1">
-              Manage your payment gateway and view admin subscription payments
-            </p>
+      {/* Alert */}
+      {error && (
+        <div className="bg-red-50/80 backdrop-blur-sm border border-red-200/60 rounded-lg p-3">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <svg className="w-4 h-4 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <p className="text-red-800 font-medium text-sm">{error}</p>
           </div>
         </div>
+      )}
 
-        <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-8">
-          {isConnected ? (
-            <div>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-full bg-[#E8EFEA] flex items-center justify-center">
-                  <div className="w-6 h-6 text-[#395917]">✓</div>
+      {/* Main Content */}
+      <div className="space-y-4">
+        {isConnected ? (
+          <div className="space-y-4">
+            {/* Status Card */}
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200/50">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-green-500 rounded-lg flex items-center justify-center">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                 </div>
                 <div>
-                  <h3 className="text-lg font-medium text-[#2C3B2A]">
-                    Payment Gateway Status
-                  </h3>
-                  <p className="text-[#5C7361]">
-                    Active and ready to process admin subscription payments
-                  </p>
+                  <h3 className="text-base font-semibold text-slate-800">Payment Gateway Active</h3>
+                  <p className="text-slate-600 text-sm">Ready to process admin subscription payments</p>
                 </div>
               </div>
+            </div>
 
-              <div className="bg-white p-8 rounded-xl shadow-sm border border-[#E8EFEA] mb-6">
-                <div className="flex flex-col md:flex-row gap-6 items-center">
-                  <div className="flex-grow">
-                    <input
-                      type="text"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      placeholder="Search by admin username or subscription year..."
-                      className="w-full px-4 py-3 border border-[#E8EFEA] rounded-lg focus:outline-none focus:ring-2 focus:ring-[#395917]/20"
-                    />
-                  </div>
-                  <PaymentHistoryPDF
-                    title="Subscription Payment History"
-                    data={filteredHistory}
-                    columns={columns}
-                    filename="HamroSamajSubscriptionPaymentList"
-                  />
+            {/* Search Section */}
+            <div className="flex flex-col md:flex-row gap-3">
+              <div className="relative flex-1 max-w-xs">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search by admin username..."
+                  className="w-full pl-8 h-8 text-sm border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+                />
+                <div className="absolute left-2 top-1/2 transform -translate-y-1/2">
+                  <svg className="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
                 </div>
               </div>
+              <PaymentHistoryPDF
+                title="Subscription Payment History"
+                data={filteredHistory}
+                columns={columns}
+                filename="HamroSamajSubscriptionPaymentList"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm transition-all duration-300"
+              />
+            </div>
 
-              <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] overflow-hidden">
-                {loading ? (
-                  <div className="flex justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#395917]"></div>
+            {/* Payment History */}
+            <div className="bg-white/70 backdrop-blur-sm rounded-lg border border-white/50 overflow-hidden">
+              {loading ? (
+                <div className="flex justify-center py-12">
+                  <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500"></div>
+                </div>
+              ) : filteredHistory.length === 0 ? (
+                <div className="text-center py-12">
+                  <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
                   </div>
-                ) : filteredHistory.length === 0 ? (
-                  <div className="text-center py-8 text-[#5C7361]">
-                    No subscription payment history available.
-                  </div>
-                ) : (
+                  <p className="text-slate-500 text-sm">No subscription payment history available.</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead>
-                      <tr className="bg-[#2C3B2A] text-white">
-                        <th className="px-8 py-4 text-left font-medium text-base">
-                          <div className="flex items-center gap-2">
-                            Admin
-                            <span className="text-white/50">|</span>
-                          </div>
-                        </th>
-                        <th className="px-8 py-4 text-left font-medium text-base">
-                          <div className="flex items-center gap-2">
-                            Subscription Year
-                            <span className="text-white/50">|</span>
-                          </div>
-                        </th>
-                        <th className="px-8 py-4 text-left font-medium text-base">
-                          <div className="flex items-center gap-2">
-                            Date
-                            <span className="text-white/50">|</span>
-                          </div>
-                        </th>
-                        <th className="px-8 py-4 text-left font-medium text-base">
-                          <div className="flex items-center gap-2">
-                            Amount
-                            <span className="text-white/50">|</span>
-                          </div>
-                        </th>
-                        <th className="px-8 py-4 text-left font-medium text-base">
-                          Status
-                        </th>
-                        <th className="px-8 py-4 text-left font-medium text-base">
-                          Controls
-                        </th>
+                    <thead className="bg-slate-50 border-b border-slate-200">
+                      <tr>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-700">Admin</th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-700">Year</th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-700">Date</th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-700">Amount</th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-700">Status</th>
+                        <th className="px-4 py-2 text-left text-xs font-semibold text-slate-700">Actions</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-[#E8EFEA]">
+                    <tbody className="divide-y divide-slate-200">
                       {filteredHistory.map((payment) => (
-                        <tr
-                          key={payment.id}
-                          className="hover:bg-[#F5F8F6] transition-colors"
-                        >
-                          <td className="px-8 py-5 text-base text-[#2C3B2A] font-medium">
-                            {payment.admin_username}
+                        <tr key={payment.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-4 py-2">
+                            <div className="font-medium text-slate-800 text-sm">{payment.admin_username}</div>
                           </td>
-                          <td className="px-8 py-5 text-base text-[#5C7361]">
-                            {payment.subscription_year}
-                          </td>
-                          <td className="px-8 py-5 text-base text-[#5C7361]">
+                          <td className="px-4 py-2 text-slate-600 text-sm">{payment.subscription_year}</td>
+                          <td className="px-4 py-2 text-slate-600 text-sm">
                             {new Date(payment.created_at).toLocaleDateString()}
                           </td>
-                          <td className="px-8 py-5 text-base text-[#5C7361]">
-                            ₹{payment.amount}
+                          <td className="px-4 py-2">
+                            <div className="font-semibold text-slate-800 text-sm">₹{payment.amount}</div>
                           </td>
-                          <td className="px-8 py-5">
-                            <span
-                              className={`px-3 py-1 rounded-full text-sm ${getStatusClasses(payment.status_display || payment.status)}`}
-                            >
+                          <td className="px-4 py-2">
+                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusClasses(payment.status_display || payment.status)}`}>
                               {payment.status_display || payment.status}
                             </span>
                           </td>
-                          <td className="px-8 py-5 text-sm space-x-2">
+                          <td className="px-4 py-2">
                             <button
-                              onClick={() =>
-                                extendSubscriptionBy7Days(payment.admin)
-                              }
-                              className="px-3 py-1 rounded border border-yellow-500 text-yellow-700 hover:bg-yellow-50"
+                              onClick={() => extendSubscriptionBy7Days(payment.admin)}
+                              className="px-2 py-1 text-xs bg-amber-500 text-white rounded-lg hover:bg-amber-600 transition-colors"
                             >
                               +7 days
                             </button>
@@ -229,35 +215,42 @@ const SuperadminStripeSetup = () => {
                       ))}
                     </tbody>
                   </table>
-                )}
-              </div>
+                </div>
+              )}
             </div>
-          ) : (
-            <div className="text-center py-12">
-              <h3 className="text-xl font-medium text-[#2C3B2A] mb-4">
-                Connect Payment Gateway
-              </h3>
-              <p className="text-[#5C7361] mb-8 max-w-md mx-auto">
-                Set up your payment gateway to start accepting subscription
-                payments from admins securely.
-              </p>
-              <button
-                onClick={handleStripeConnect}
-                disabled={loading}
-                className="bg-[#395917] text-white px-8 py-3 rounded-lg hover:bg-[#2C3B2A] disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-200 flex items-center gap-2 mx-auto"
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                    <span>Connecting...</span>
-                  </>
-                ) : (
-                  <>Connect Payment Gateway</>
-                )}
-              </button>
+          </div>
+        ) : (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
             </div>
-          )}
-        </div>
+            <h3 className="text-xl font-semibold text-slate-800 mb-3">Connect Payment Gateway</h3>
+            <p className="text-slate-500 mb-6 max-w-md mx-auto text-sm">
+              Set up your payment gateway to start accepting subscription payments from admins securely.
+            </p>
+            <button
+              onClick={handleStripeConnect}
+              disabled={loading}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg disabled:bg-slate-400 disabled:cursor-not-allowed transition-all duration-300 flex items-center gap-2 mx-auto"
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  <span className="text-sm">Connecting...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                  </svg>
+                  <span className="text-sm">Connect Payment Gateway</span>
+                </>
+              )}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

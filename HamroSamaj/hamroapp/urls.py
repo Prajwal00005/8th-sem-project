@@ -36,6 +36,7 @@ urlpatterns = [
     path('stripe/connect/', views.AdminStripeConnect.as_view(), name='stripeConnect'),
     path('stripe/connect/complete/', views.StripeConnectComplete.as_view(), name='stripeConnectComplete'),
     path('residentPayments/', views.getResidentPayments, name='get-resident-payments'),
+    path('residentPaymentsReport/', views.getAllResidentPaymentsReport, name='resident-payments-report'),
     path('confirmPayment/', views.confirmPayment, name='confirm-payment'),
     path('checkPaymentDue/', views.checkPaymentDue, name='check-payment-due'),
     path('generatePaymentHistoryPDF/', views.generatePaymentHistoryPDF, name='generate-payment-history-pdf'),
@@ -43,6 +44,7 @@ urlpatterns = [
     path('createAdminSubscriptionIntent/', views.CreateAdminSubscriptionIntentView.as_view(), name='create-admin-subscription-intent'),
     path('confirmAdminSubscription/', views.confirmAdminSubscription, name='confirm-admin-subscription'),
     path('adminSubscriptionPayments/', views.getAdminSubscriptionPayments, name='get-admin-subscription-payments'),
+    path('admins/<int:admin_id>/cashSubscription/', views.recordAdminCashSubscription, name='record-admin-cash-subscription'),
     path('checkSubscriptionDue/', views.checkSubscriptionDue, name='check-subscription-due'),
     path('admins/<int:admin_id>/extendSubscription7Days/', views.extendAdminSubscription, name='extend-admin-subscription-7-days'),
     path('admins/<int:admin_id>/toggleAccess/', views.toggleAdminAccess, name='toggle-admin-access'),
@@ -51,6 +53,7 @@ urlpatterns = [
     path('securityPayments/', views.getSecurityPayments, name='get-security-payments'),
     path('checkSecurityPaymentDue/', views.checkSecurityPaymentDue, name='check-security-payment-due'),
     path('check_salary_increase/', views.check_salary_increase, name='check-salary-increase'),
+    path('admins/security/<int:security_id>/manual-salary/', views.recordSecurityCashPayment, name='admin-record-manual-security-salary'),
     
     path('complaints/submit/', views.submitComplaint, name='submitComplaint'),
     path('complaints/list/', views.getComplaints, name='getComplaints'),
@@ -71,6 +74,7 @@ urlpatterns = [
     path('bills/resident/<int:bill_id>/', views.residentBillDetail, name='resident-bill-detail'),
     path('bills/resident/<int:bill_id>/create-payment-intent/', views.createBillPaymentIntentView.as_view(), name='resident-bill-create-payment-intent'),
     path('bills/resident/confirm-payment/', views.confirmBillPayment, name='resident-bill-confirm-payment'),
+    path('admins/residents/<int:resident_id>/manual-rent/', views.recordManualRentPayment, name='admin-record-manual-rent'),
 
     
     path('posts/', views.get_posts, name='get_posts'),

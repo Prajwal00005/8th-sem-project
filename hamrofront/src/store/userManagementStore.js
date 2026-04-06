@@ -5,7 +5,8 @@ import { toast } from "react-toastify";
 export const useUserManagementStore = create((set, get) => ({
   users: [],
   filteredUsers: [],
-  residentPaymentSummary: {},
+  payments: [],
+  securityPayments: [],
   formData: {
     username: "",
     email: "",
@@ -27,60 +28,33 @@ export const useUserManagementStore = create((set, get) => ({
   setIsFormVisible: (visible) => set({ isFormVisible: visible }),
   setSearchTerm: (term) => set({ searchTerm: term }),
   setRoleFilter: (filter) => set({ roleFilter: filter }),
-  setResidentPaymentSummary: (summary) => set({ residentPaymentSummary: summary }),
 
   fetchUsers: async () => {
     try {
-      const response = await axios.get("/api/v1/userList/", {
-        headers: { Authorization: `Token ${localStorage.getItem("token")}` },
-      });
-      console.log("Fetched users:", response.data);
-      set({ users: response.data, filteredUsers: response.data });
-    } catch (error) {
-      console.error("Failed to fetch users:", error);
-    }
-  },
-
-  fetchResidentPaymentSummary: async () => {
-    try {
-      const response = await axios.get("/api/v1/residentPaymentsReport/", {
-        headers: { Authorization: `Token ${localStorage.getItem("token")}` },
-      });
-      const payments = response.data || [];
-      const summary = {};
-      payments.forEach((p) => {
-        const residentId = p.resident;
-        if (!residentId) return;
-        const existing = summary[residentId];
-        const currentDate = new Date(p.period_to);
-        if (!existing || currentDate > new Date(existing.lastPeriodTo)) {
-          summary[residentId] = {
-            lastPeriodTo: p.period_to,
-            lastStatus: p.status,
-          };
-        }
-      });
-      set({ residentPaymentSummary: summary });
-    } catch (error) {
-      console.error("Failed to fetch resident payment summary:", error);
-    }
-  },
-
-  recordManualRentPayment: async (residentId, payload) => {
-    try {
-      const response = await axios.post(
-        `/api/v1/residentPayments/manual/${residentId}/`,
-        payload,
-        {
+      const [usersRes, paymentsRes, securityRes] = await Promise.all([
+        axios.get("/api/v1/userList/", {
           headers: { Authorization: `Token ${localStorage.getItem("token")}` },
-        },
-      );
-      toast.success("Manual rent payment recorded");
-      return response.data;
+        }),
+        axios.get("/api/v1/paymentHome/", {
+          headers: { Authorization: `Token ${localStorage.getItem("token")}` },
+        }),
+        axios.get("/api/v1/securityPayments/", {
+          headers: { Authorization: `Token ${localStorage.getItem("token")}` },
+        }),
+      ]);
+
+      console.log("Fetched users:", usersRes.data);
+      console.log("Fetched payments:", paymentsRes.data);
+
+      set({
+        users: usersRes.data,
+        filteredUsers: usersRes.data,
+        payments: paymentsRes.data,
+        securityPayments: securityRes.data,
+      });
     } catch (error) {
-      const msg = error.response?.data?.error || "Failed to record manual payment";
-      toast.error(msg);
-      throw error;
+      console.error("Failed to fetch users or payments:", error);
+      toast.error("Failed to load users or rent payments");
     }
   },
 
@@ -183,6 +157,69 @@ export const useUserManagementStore = create((set, get) => ({
         error.response?.data || error.message,
       );
       toast.error("Failed to delete user");
+    }
+  },
+
+  recordManualRent: async ({ residentId, period_from, period_to }) => {
+    try {
+      const response = await axios.post(
+        `/api/v1/admins/residents/${residentId}/manual-rent/`,
+        { period_from, period_to },
+        {
+          headers: { Authorization: `Token ${localStorage.getItem("token")}` },
+        },
+      );
+      toast.success("Manual rent payment recorded");
+
+      // Refresh payments so overdue highlighting is up to date
+      const paymentsRes = await axios.get("/api/v1/paymentHome/", {
+        headers: { Authorization: `Token ${localStorage.getItem("token")}` },
+      });
+      set({ payments: paymentsRes.data });
+
+      return response.data;
+    } catch (error) {
+      const message =
+        error.response?.data?.error ||
+        error.message ||
+        "Failed to record manual rent";
+      console.error(
+        "Failed to record manual rent:",
+        error.response?.data || error.message,
+      );
+      toast.error(message);
+      throw error;
+    }
+  },
+
+  recordManualSecuritySalary: async ({ securityId, payment_year }) => {
+    try {
+      const response = await axios.post(
+        `/api/v1/admins/security/${securityId}/manual-salary/`,
+        { payment_year },
+        {
+          headers: { Authorization: `Token ${localStorage.getItem("token")}` },
+        },
+      );
+      toast.success("Manual security salary recorded");
+
+      const securityRes = await axios.get("/api/v1/securityPayments/", {
+        headers: { Authorization: `Token ${localStorage.getItem("token")}` },
+      });
+      set({ securityPayments: securityRes.data });
+
+      return response.data;
+    } catch (error) {
+      const message =
+        error.response?.data?.error ||
+        error.message ||
+        "Failed to record manual security salary";
+      console.error(
+        "Failed to record manual security salary:",
+        error.response?.data || error.message,
+      );
+      toast.error(message);
+      throw error;
     }
   },
 

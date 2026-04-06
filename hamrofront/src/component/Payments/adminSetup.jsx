@@ -71,22 +71,21 @@ const AdminStripeSetup = () => {
   const filteredHistory = getFilteredHistory();
 
   return (
-    <div className="p-8 bg-[#F5F8F6]">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {error && (
-          <Alert variant="error" className="mb-4 bg-red-50 text-red-900 rounded-xl">
-            <AlertDescription>{error}</AlertDescription>
-          </Alert>
-        )}
+    <div className="space-y-6">
+      {error && (
+        <Alert variant="error" className="mb-4 bg-red-50 text-red-900 rounded-xl">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h2 className="text-2xl font-semibold text-[#2C3B2A]">Payment Settings</h2>
-            <p className="text-[#5C7361] mt-1">Manage your payment gateway and view transaction history</p>
-          </div>
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h2 className="text-2xl font-semibold text-[#2C3B2A]">Payment Settings</h2>
+          <p className="text-[#5C7361] mt-1">Manage your payment gateway and view transaction history</p>
         </div>
+      </div>
 
-        <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-8">
+      <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-8">
           {isConnected ? (
             <div>
               <div className="flex items-center gap-3 mb-6">
@@ -221,7 +220,6 @@ const AdminStripeSetup = () => {
           )}
         </div>
       </div>
-    </div>
   );
 };
 

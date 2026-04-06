@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "../UI/alert";
 import { Button } from "../UI/button";
 import { X } from "lucide-react";
 import { useResidentBillStore } from "../../store/residentBillStore";
+import { toast } from "react-toastify";
 
 const stripePromise = loadStripe(process.env.REACT_APP_STRIPE_PUBLISHABLE_KEY);
 
@@ -41,7 +42,7 @@ const BillPaymentForm = ({ onClose }) => {
 
     if (paymentIntent && paymentIntent.status === "succeeded") {
       await confirmBillPayment(paymentIntent.id);
-      alert("Bill payment successful!");
+      toast.success("Bill payment successful!");
       onClose();
     }
   };

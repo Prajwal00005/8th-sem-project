@@ -86,7 +86,7 @@ const SuperadminStripeSetup = () => {
   const filteredHistory = getFilteredHistory();
 
   return (
-    <div className="p-8 bg-[#F5F8F6]">
+    <div className="p-8 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6">
         {error && (
           <Alert

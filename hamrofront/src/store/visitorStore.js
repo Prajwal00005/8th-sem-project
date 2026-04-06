@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import axios from "../utils/axiosConfig";
+import { toast } from "react-toastify";
 
 export const useVisitorStore = create((set, get) => ({
   isFormVisible: false,
@@ -118,7 +119,7 @@ export const useVisitorStore = create((set, get) => ({
       );
       if (response.status === 200) {
         get().fetchVisitors();
-        alert(`Visitor ${action} successfully`);
+        toast.success(`Visitor ${action} successfully`);
       }
     } catch (error) {
       set({ error: `Failed to ${action} visitor` });

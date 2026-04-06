@@ -11,6 +11,8 @@ import ForgotPassword from './functions/forgotpassword';
 import AdminStripeSetup from './component/Payments/adminSetup';
 import Infoblog from './component/InfoBlog/infoblog';
 import BlogDetail from './component/InfoBlog/blogDetail';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const App = () => {
   return (
@@ -66,6 +68,7 @@ const App = () => {
 
         <Route path="*" element={<Navigate to="/login" />} />
       </Routes>
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop={false} closeOnClick pauseOnFocusLoss draggable pauseOnHover theme="colored" />
     </Router>
   );
 };

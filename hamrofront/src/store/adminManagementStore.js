@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import axios from "../utils/axiosConfig";
+import { toast } from "react-toastify";
 
 export const useSadminManagementStore = create((set, get) => ({
   admins: [],
@@ -38,7 +39,7 @@ export const useSadminManagementStore = create((set, get) => ({
     const { formData } = get();
     const subscriptionPrice = parseFloat(formData.subscription_price);
     if (isNaN(subscriptionPrice) || subscriptionPrice <= 0) {
-      alert("Please enter a valid subscription price greater than 0.");
+      toast.error("Please enter a valid subscription price greater than 0.");
       return;
     }
     try {
@@ -49,7 +50,7 @@ export const useSadminManagementStore = create((set, get) => ({
           headers: { Authorization: `Token ${localStorage.getItem("token")}` },
         },
       );
-      alert("Admin added successfully");
+      toast.success("Admin added successfully");
       set((state) => ({
         admins: [...state.admins, response.data],
         filteredAdmins: [...state.admins, response.data],
@@ -61,7 +62,7 @@ export const useSadminManagementStore = create((set, get) => ({
         "Failed to add admin:",
         error.response?.data || error.message,
       );
-      alert("Failed to add admin");
+      toast.error("Failed to add admin");
     }
   },
 
@@ -70,7 +71,7 @@ export const useSadminManagementStore = create((set, get) => ({
     const { formData, editingAdmin } = get();
     const subscriptionPrice = parseFloat(formData.subscription_price);
     if (isNaN(subscriptionPrice) || subscriptionPrice <= 0) {
-      alert("Please enter a valid subscription price greater than 0.");
+      toast.error("Please enter a valid subscription price greater than 0.");
       return;
     }
     const updatedAdmin = {
@@ -87,7 +88,7 @@ export const useSadminManagementStore = create((set, get) => ({
           headers: { Authorization: `Token ${localStorage.getItem("token")}` },
         },
       );
-      alert("Admin updated successfully");
+      toast.success("Admin updated successfully");
       await get().fetchAdmins(); // Refresh admin list
       get().resetForm();
       set((state) => ({
@@ -105,7 +106,7 @@ export const useSadminManagementStore = create((set, get) => ({
         "Failed to update admin:",
         error.response?.data || error.message,
       );
-      alert("Failed to update admin");
+      toast.error("Failed to update admin");
     }
   },
 
@@ -120,7 +121,7 @@ export const useSadminManagementStore = create((set, get) => ({
       await axios.delete(`/api/v1/deleteAdmin/${adminId}/`, {
         headers: { Authorization: `Token ${localStorage.getItem("token")}` },
       });
-      alert("Admin deleted successfully");
+      toast.success("Admin deleted successfully");
       set((state) => ({
         admins: state.admins.filter((admin) => admin.id !== adminId),
         filteredAdmins: state.filteredAdmins.filter(
@@ -133,7 +134,7 @@ export const useSadminManagementStore = create((set, get) => ({
         "Failed to delete admin:",
         error.response?.data || error.message,
       );
-      alert("Failed to delete admin");
+      toast.error("Failed to delete admin");
     }
   },
 
@@ -152,7 +153,37 @@ export const useSadminManagementStore = create((set, get) => ({
         "Failed to toggle admin access:",
         error.response?.data || error.message,
       );
-      alert("Failed to update admin access");
+      toast.error("Failed to update admin access");
+    }
+  },
+
+  recordCashSubscription: async (adminId) => {
+    const { admins } = get();
+    const admin = admins.find((a) => a.id === adminId);
+    if (!admin) return;
+
+    const price = parseFloat(admin.subscription_price);
+    if (isNaN(price) || price <= 0) {
+      toast.error("Set a valid subscription price before manual payment.");
+      return;
+    }
+
+    try {
+      await axios.post(
+        `/api/v1/admins/${adminId}/cashSubscription/`,
+        { amount: price },
+        {
+          headers: { Authorization: `Token ${localStorage.getItem("token")}` },
+        },
+      );
+      toast.success("Manual 1-year subscription recorded");
+      await get().fetchAdmins();
+    } catch (error) {
+      console.error(
+        "Failed to record manual subscription:",
+        error.response?.data || error.message,
+      );
+      toast.error("Failed to record manual subscription");
     }
   },
 
@@ -207,11 +238,17 @@ export const useSadminManagementStore = create((set, get) => ({
     let filtered = admins;
 
     if (searchTerm) {
-      filtered = filtered.filter(
-        (admin) =>
-          admin.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          admin.email.toLowerCase().includes(searchTerm.toLowerCase()),
-      );
+      const term = searchTerm.toLowerCase();
+      filtered = filtered.filter((admin) => {
+        const username = (admin.username || "").toLowerCase();
+        const email = (admin.email || "").toLowerCase();
+        const apartment = (admin.apartmentName || "").toLowerCase();
+        return (
+          username.includes(term) ||
+          email.includes(term) ||
+          apartment.includes(term)
+        );
+      });
     }
 
     set({ filteredAdmins: filtered });

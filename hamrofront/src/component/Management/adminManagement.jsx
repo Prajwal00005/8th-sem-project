@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useSadminManagementStore } from "../../store/adminManagementStore";
-import { Edit3, Trash2, UserPlus, X } from "lucide-react";
+import { Edit3, Trash2, UserPlus, X, Eye, CreditCard } from "lucide-react";
 import { Input } from "../UI/input";
 import { Button } from "../UI/button";
 
@@ -21,10 +21,13 @@ const SadminManagement = () => {
     toggleFormVisibility,
     filterAdmins,
     toggleAdminAccess,
+    recordCashSubscription,
   } = useSadminManagementStore();
 
   const [showConfirm, setShowConfirm] = useState(false);
   const [adminToDelete, setAdminToDelete] = useState(null);
+  const [viewAdmin, setViewAdmin] = useState(null);
+  const [showViewModal, setShowViewModal] = useState(false);
 
   useEffect(() => {
     fetchAdmins();
@@ -67,7 +70,7 @@ const SadminManagement = () => {
   };
 
   return (
-    <div className="p-8 bg-[#F5F8F6]">
+    <div className="p-8 bg-gray-50 min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header Section */}
         <div className="flex justify-between items-center mb-8">
@@ -95,7 +98,7 @@ const SadminManagement = () => {
               <Input
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Search admins..."
+                placeholder="Search by name, email or apartment..."
                 className="text-base py-3"
               />
             </div>
@@ -103,131 +106,181 @@ const SadminManagement = () => {
         </div>
 
         {/* Admins Table */}
-        <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] overflow-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="bg-[#2C3B2A] text-white">
-                <th className="px-4 py-3 text-left font-medium">
-                  <div className="flex items-center gap-2">
-                    Username
-                    <span className="text-white/50">|</span>
-                  </div>
-                </th>
-                <th className="px-4 py-3 text-left font-medium">
-                  <div className="flex items-center gap-2">
-                    Email
-                    <span className="text-white/50">|</span>
-                  </div>
-                </th>
-                <th className="px-4 py-3 text-left font-medium">
-                  <div className="flex items-center gap-2">
-                    Apartment Name
-                    <span className="text-white/50">|</span>
-                  </div>
-                </th>
-                <th className="px-4 py-3 text-left font-medium">
-                  <div className="flex items-center gap-2">
+        <div className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-4">
+          <div className="overflow-x-auto border border-gray-200 rounded-lg">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-100">
+                <tr>
+                  <th className="px-4 py-2 text-left font-medium text-gray-700">
+                    Apartment
+                  </th>
+                  <th className="px-4 py-2 text-left font-medium text-gray-700">
                     Subscription Price
-                    <span className="text-white/50">|</span>
-                  </div>
-                </th>
-                <th className="px-4 py-3 text-left font-medium">
-                  <div className="flex items-center gap-2">
+                  </th>
+                  <th className="px-4 py-2 text-left font-medium text-gray-700">
                     Subscription Status
-                    <span className="text-white/50">|</span>
-                  </div>
-                </th>
-                <th className="px-4 py-3 text-left font-medium">
-                  <div className="flex items-center gap-2">
+                  </th>
+                  <th className="px-4 py-2 text-left font-medium text-gray-700">
                     Valid Till
-                    <span className="text-white/50">|</span>
-                  </div>
-                </th>
-                <th className="px-4 py-3 text-left font-medium">
-                  <div className="flex items-center gap-2">
+                  </th>
+                  <th className="px-4 py-2 text-left font-medium text-gray-700">
                     Access
-                    <span className="text-white/50">|</span>
-                  </div>
-                </th>
-                <th className="px-4 py-3 text-right font-medium">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#E8EFEA]">
-              {filteredAdmins.map((admin) => (
-                <tr
-                  key={admin.id}
-                  className="hover:bg-[#F5F8F6] transition-colors"
-                >
-                  <td className="px-4 py-3 text-[#2C3B2A] font-medium">
-                    {admin.username}
-                  </td>
-                  <td className="px-4 py-3 text-[#5C7361]">{admin.email}</td>
-                  <td className="px-4 py-3 text-[#2C3B2A]">
-                    {admin.apartmentName}
-                  </td>
-                  <td className="px-4 py-3 text-[#5C7361]">
-                    ₹
-                    {admin.subscription_price
-                      ? Number(admin.subscription_price).toFixed(2)
-                      : "0.00"}
-                  </td>
-                  <td className="px-4 py-3">
-                    {admin.subscription_status ? (
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-xs ${getSubscriptionStatusClasses(admin.subscription_status)}`}
+                  </th>
+                  <th className="px-4 py-2  font-medium text-gray-700 text-center">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {filteredAdmins.map((admin) => (
+                  <tr key={admin.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-2 text-gray-900">
+                      {admin.apartmentName}
+                    </td>
+                    <td className="px-4 py-2 text-gray-700">
+                      ₹
+                      {admin.subscription_price
+                        ? Number(admin.subscription_price).toFixed(2)
+                        : "0.00"}
+                    </td>
+                    <td className="px-4 py-2">
+                      {admin.subscription_status ? (
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-xs ${getSubscriptionStatusClasses(admin.subscription_status)}`}
+                        >
+                          {admin.subscription_status}
+                        </span>
+                      ) : (
+                        <span className="text-gray-500 text-sm">N/A</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2 text-gray-600 text-xs">
+                      {admin.subscription_end_date
+                        ? new Date(
+                            admin.subscription_end_date,
+                          ).toLocaleDateString()
+                        : "—"}
+                    </td>
+                    <td className="px-4 py-2">
+                      <button
+                        onClick={() =>
+                          toggleAdminAccess(admin.id, !admin.is_active)
+                        }
+                        className={`relative inline-flex items-center h-5 w-10 rounded-full transition-colors duration-150 focus:outline-none ${
+                          admin.is_active ? "bg-green-500" : "bg-red-500"
+                        }`}
                       >
-                        {admin.subscription_status}
-                      </span>
-                    ) : (
-                      <span className="text-[#5C7361] text-sm">N/A</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-[#5C7361] text-xs">
-                    {admin.subscription_end_date
+                        <span
+                          className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-150 ${
+                            admin.is_active ? "translate-x-5" : "translate-x-1"
+                          }`}
+                        />
+                      </button>
+                    </td>
+                    <td className="px-4 py-2">
+                      <div className="flex flex-wrap gap-2 justify-end">
+                        <Button
+                          variant="secondary"
+                          onClick={() => {
+                            setViewAdmin(admin);
+                            setShowViewModal(true);
+                          }}
+                          className="text-xs px-2 py-1.5 flex items-center gap-1"
+                        >
+                          <Eye className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          onClick={() => startEditing(admin)}
+                          className="text-xs px-2 py-1.5 flex items-center gap-1"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          onClick={() => recordCashSubscription(admin.id)}
+                          className="text-xs px-2 py-1.5 bg-blue-600 text-white hover:bg-blue-700 border-0 flex items-center gap-1"
+                        >
+                          <CreditCard className="w-3 h-3" />
+                        </Button>
+                        <Button
+                          variant="danger"
+                          onClick={() => confirmDelete(admin)}
+                          className="text-xs px-2 py-1.5 flex items-center gap-1"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* View Details Modal */}
+        {viewAdmin && showViewModal && (
+          <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold text-[#2C3B2A]">
+                  Apartment Details
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowViewModal(false);
+                    setViewAdmin(null);
+                  }}
+                  className="p-2 hover:bg-[#E8EFEA] rounded-full"
+                >
+                  <X className="w-5 h-5 text-[#2C3B2A]" />
+                </button>
+              </div>
+              <div className="space-y-3 text-sm text-[#2C3B2A]">
+                <div className="flex justify-between">
+                  <span className="font-medium">Username:</span>
+                  <span>{viewAdmin.username}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Email:</span>
+                  <span>{viewAdmin.email}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Apartment:</span>
+                  <span>{viewAdmin.apartmentName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Subscription Price:</span>
+                  <span>
+                    ₹
+                    {viewAdmin.subscription_price
+                      ? Number(viewAdmin.subscription_price).toFixed(2)
+                      : "0.00"}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Subscription Status:</span>
+                  <span>{viewAdmin.subscription_status || "N/A"}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Valid Till:</span>
+                  <span>
+                    {viewAdmin.subscription_end_date
                       ? new Date(
-                          admin.subscription_end_date,
+                          viewAdmin.subscription_end_date,
                         ).toLocaleDateString()
                       : "—"}
-                  </td>
-                  <td className="px-4 py-3">
-                    <button
-                      onClick={() =>
-                        toggleAdminAccess(admin.id, !admin.is_active)
-                      }
-                      className={`relative inline-flex items-center h-5 w-10 rounded-full transition-colors duration-150 focus:outline-none ${
-                        admin.is_active ? "bg-green-500" : "bg-red-500"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform duration-150 ${
-                          admin.is_active ? "translate-x-5" : "translate-x-1"
-                        }`}
-                      />
-                    </button>
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex gap-2 justify-end">
-                      <Button
-                        variant="secondary"
-                        onClick={() => startEditing(admin)}
-                        className=""
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="danger"
-                        onClick={() => confirmDelete(admin)}
-                        className=""
-                      >
-                        {/* <Trash2 size={18} /> */} Delete
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Access:</span>
+                  <span>{viewAdmin.is_active ? "Active" : "Inactive"}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Form Modal */}
         {isFormVisible && (

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useUserManagementStore } from '../../store/userManagementStore';
-import { Edit3, Trash2, UserPlus, X } from 'lucide-react';
+import { Edit3, Trash2, UserPlus, X, Eye, DollarSign } from 'lucide-react';
 import { Input } from '../UI/input';
 import { Select } from '../UI/select';
 import { Button } from '../UI/button';
@@ -17,9 +17,11 @@ const UserManagement = () => {
         setSearchTerm,
         setRoleFilter,
         fetchUsers,
+        fetchResidentPaymentSummary,
         handleAddUser,
         handleEditUser,
         handleDeleteUser,
+        recordManualRentPayment,
         startEditing,
         toggleFormVisibility,
         filterUsers,
@@ -29,10 +31,15 @@ const UserManagement = () => {
 
     const [showConfirm, setShowConfirm] = useState(false);
     const [userToDelete, setUserToDelete] = useState(null);
+    const [selectedUser, setSelectedUser] = useState(null);
+    const [showViewModal, setShowViewModal] = useState(false);
+    const [manualPayUser, setManualPayUser] = useState(null);
+    const [manualPayPeriod, setManualPayPeriod] = useState({ from: '', to: '' });
 
     useEffect(() => {
         fetchUsers();
-    }, [fetchUsers]);
+        fetchResidentPaymentSummary();
+    }, [fetchUsers, fetchResidentPaymentSummary]);
 
     useEffect(() => {
         filterUsers();
@@ -54,6 +61,21 @@ const UserManagement = () => {
     const handleCancelDelete = () => {
         setShowConfirm(false);
         setUserToDelete(null);
+    };
+
+    const openViewModal = (user) => {
+        setSelectedUser(user);
+        setShowViewModal(true);
+    };
+
+    const closeViewModal = () => {
+        setShowViewModal(false);
+        setSelectedUser(null);
+    };
+
+    const openManualPayModal = (user) => {
+        setManualPayUser(user);
+        setManualPayPeriod({ from: '', to: '' });
     };
 
     return (

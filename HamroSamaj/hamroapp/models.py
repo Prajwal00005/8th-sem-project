@@ -160,6 +160,52 @@ class BillItem(models.Model):
         return f"{self.name} - {self.amount}"
 
 
+class SecurityAggregateBill(models.Model):
+    """Aggregate bill from security to admin (admin-side expense)."""
+
+    admin = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='security_aggregate_bills',
+        limit_choices_to={'role': 'admin'},
+    )
+    security = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='security_aggregate_bills_created',
+        limit_choices_to={'role': 'security'},
+    )
+    date = models.DateField()
+    total_amount = models.DecimalField(max_digits=12, decimal_places=2)
+    payment_status = models.CharField(
+        max_length=20,
+        choices=(('unpaid', 'Unpaid'), ('paid', 'Paid')),
+        default='unpaid',
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Security Aggregate Bill #{self.id} - {self.total_amount}"
+
+
+class SecurityAggregateBillItem(models.Model):
+    bill = models.ForeignKey(
+        SecurityAggregateBill,
+        on_delete=models.CASCADE,
+        related_name='items',
+    )
+    name = models.CharField(max_length=100)
+    units = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    rate_per_unit = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    amount = models.DecimalField(max_digits=12, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.name} - {self.amount}"
+
+
 #Subscription Payment
 
 class AdminSubscriptionPayment(models.Model): #new model
@@ -197,7 +243,13 @@ class SecurityPayment(models.Model):
         choices=(('success', 'Success'), ('failed', 'Failed')),
         default='failed'
     )
+    # Month and year the salary payment covers (monthly payments)
     payment_year = models.IntegerField(help_text="Year the payment covers")
+    payment_month = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text="Month (1-12) the payment covers",
+    )
     payment_end_date = models.DateField(null=True, blank=True)
 
     class Meta:

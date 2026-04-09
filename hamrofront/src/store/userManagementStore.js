@@ -192,11 +192,15 @@ export const useUserManagementStore = create((set, get) => ({
     }
   },
 
-  recordManualSecuritySalary: async ({ securityId, payment_year }) => {
+  recordManualSecuritySalary: async ({
+    securityId,
+    payment_year,
+    payment_month,
+  }) => {
     try {
       const response = await axios.post(
         `/api/v1/admins/security/${securityId}/manual-salary/`,
-        { payment_year },
+        { payment_year, payment_month },
         {
           headers: { Authorization: `Token ${localStorage.getItem("token")}` },
         },

@@ -138,8 +138,10 @@ const GuardDashboard = () => {
     { label: "Manage Visitors", page: "visitors" },
     { label: "Payment Settings", page: "stripeSetup" },
   ];
-
-  const totalVisitors = visitorStats.reduce((acc, curr) => acc + curr.count, 0);
+  // Show only currently checked-in visitors in the center total
+  const totalVisitors = visitorStats
+    .filter((item) => item.status && item.status.toLowerCase() === "checked-in")
+    .reduce((acc, curr) => acc + (curr.count || 0), 0);
 
   const renderContent = () => {
     switch (currentPage) {

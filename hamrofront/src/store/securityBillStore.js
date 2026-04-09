@@ -4,6 +4,7 @@ import api from "../utils/axiosConfig";
 export const useSecurityBillStore = create((set, get) => ({
   rooms: [],
   bills: [],
+  aggregateBills: [],
   loading: false,
   error: "",
   editingBill: null,
@@ -14,10 +15,20 @@ export const useSecurityBillStore = create((set, get) => ({
     items: [{ name: "", units: "", rate_per_unit: "", amount: "" }],
   },
 
+  aggregateBillForm: {
+    date: "",
+    items: [{ name: "", units: "", rate_per_unit: "", amount: "" }],
+  },
+
   setError: (error) => set({ error }),
 
   setBillForm: (updates) =>
     set((state) => ({ billForm: { ...state.billForm, ...updates } })),
+
+  setAggregateBillForm: (updates) =>
+    set((state) => ({
+      aggregateBillForm: { ...state.aggregateBillForm, ...updates },
+    })),
 
   resetBillForm: () =>
     set({
@@ -28,6 +39,10 @@ export const useSecurityBillStore = create((set, get) => ({
         payment_status: "unpaid",
         items: [{ name: "", units: "", rate_per_unit: "", amount: "" }],
       },
+      aggregateBillForm: {
+        date: "",
+        items: [{ name: "", units: "", rate_per_unit: "", amount: "" }],
+      },
     }),
 
   addItemRow: () =>
@@ -36,6 +51,17 @@ export const useSecurityBillStore = create((set, get) => ({
         ...state.billForm,
         items: [
           ...state.billForm.items,
+          { name: "", units: "", rate_per_unit: "", amount: "" },
+        ],
+      },
+    })),
+
+  addAggregateItemRow: () =>
+    set((state) => ({
+      aggregateBillForm: {
+        ...state.aggregateBillForm,
+        items: [
+          ...state.aggregateBillForm.items,
           { name: "", units: "", rate_per_unit: "", amount: "" },
         ],
       },
@@ -58,11 +84,35 @@ export const useSecurityBillStore = create((set, get) => ({
       return { billForm: { ...state.billForm, items } };
     }),
 
+  updateAggregateItemRow: (index, updates) =>
+    set((state) => {
+      const items = [...state.aggregateBillForm.items];
+      items[index] = { ...items[index], ...updates };
+      const units = items[index].units;
+      const rate = items[index].rate_per_unit;
+      if (units !== "" && rate !== "" && !updates.hasOwnProperty("amount")) {
+        const u = parseFloat(units);
+        const r = parseFloat(rate);
+        if (!isNaN(u) && !isNaN(r)) {
+          items[index].amount = (u * r).toFixed(2);
+        }
+      }
+      return { aggregateBillForm: { ...state.aggregateBillForm, items } };
+    }),
+
   removeItemRow: (index) =>
     set((state) => ({
       billForm: {
         ...state.billForm,
         items: state.billForm.items.filter((_, i) => i !== index),
+      },
+    })),
+
+  removeAggregateItemRow: (index) =>
+    set((state) => ({
+      aggregateBillForm: {
+        ...state.aggregateBillForm,
+        items: state.aggregateBillForm.items.filter((_, i) => i !== index),
       },
     })),
 
@@ -85,6 +135,17 @@ export const useSecurityBillStore = create((set, get) => ({
     } catch (err) {
       console.error("Failed to fetch bills", err);
       set({ error: "Failed to fetch bills", loading: false });
+    }
+  },
+
+  fetchAggregateBills: async () => {
+    set({ loading: true, error: "" });
+    try {
+      const res = await api.get("/api/v1/bills/security/aggregate/");
+      set({ aggregateBills: res.data, loading: false });
+    } catch (err) {
+      console.error("Failed to fetch aggregate bills", err);
+      set({ error: "Failed to fetch aggregate bills", loading: false });
     }
   },
 
@@ -130,6 +191,46 @@ export const useSecurityBillStore = create((set, get) => ({
     } catch (err) {
       console.error("Failed to save bill", err);
       set({ error: "Failed to save bill", loading: false });
+      return false;
+    }
+  },
+
+  saveAggregateBill: async () => {
+    const { aggregateBillForm } = get();
+    set({ loading: true, error: "" });
+
+    try {
+      const items = aggregateBillForm.items
+        .filter((i) => i.name)
+        .map((i) => ({
+          name: i.name,
+          units: i.units === "" ? null : parseFloat(i.units),
+          rate_per_unit:
+            i.rate_per_unit === "" ? null : parseFloat(i.rate_per_unit),
+          amount:
+            i.amount === "" || i.amount == null ? null : parseFloat(i.amount),
+        }));
+
+      const total_amount = items.reduce(
+        (sum, i) => (i.amount != null ? sum + i.amount : sum),
+        0,
+      );
+
+      const payload = {
+        date: aggregateBillForm.date,
+        total_amount,
+        items,
+      };
+
+      await api.post("/api/v1/bills/security/aggregate/", payload);
+
+      await get().fetchAggregateBills();
+      get().resetBillForm();
+      set({ loading: false });
+      return true;
+    } catch (err) {
+      console.error("Failed to save aggregate bill", err);
+      set({ error: "Failed to save aggregate bill", loading: false });
       return false;
     }
   },

@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-from .models import BlogPost, Follow, User,Visitor,Payment,Complaint,Vote,Comment,PostImage,Post,Room,ChatRoom,Message,ChatRoomName,AdminSubscriptionPayment,SecurityPayment,BlockedUser,Bill,BillItem
+from .models import BlogPost, Follow, User,Visitor,Payment,Complaint,Vote,Comment,PostImage,Post,Room,ChatRoom,Message,ChatRoomName,AdminSubscriptionPayment,SecurityPayment,BlockedUser,Bill,BillItem,SecurityAggregateBill,SecurityAggregateBillItem
 from decouple import config
 import stripe
 
@@ -298,6 +298,94 @@ class BillSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
   
+
+class SecurityAggregateBillItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SecurityAggregateBillItem
+        fields = ['id', 'name', 'units', 'rate_per_unit', 'amount']
+
+
+class SecurityAggregateBillSerializer(serializers.ModelSerializer):
+    admin_name = serializers.CharField(source='admin.username', read_only=True)
+    security_name = serializers.CharField(source='security.username', read_only=True)
+    items = SecurityAggregateBillItemSerializer(many=True)
+
+    class Meta:
+        model = SecurityAggregateBill
+        fields = [
+            'id', 'admin', 'admin_name', 'security', 'security_name',
+            'date', 'total_amount', 'payment_status', 'items', 'created_at',
+        ]
+        read_only_fields = ['admin_name', 'security_name', 'created_at']
+
+    def create(self, validated_data):
+        from decimal import Decimal
+
+        items_data = validated_data.pop('items', [])
+        bill = SecurityAggregateBill.objects.create(**validated_data)
+        total = Decimal('0')
+
+        for item_data in items_data:
+            amount = item_data.get('amount')
+            units = item_data.get('units')
+            rate = item_data.get('rate_per_unit')
+
+            if amount is None and units is not None and rate is not None:
+                amount = (Decimal(str(units)) * Decimal(str(rate))).quantize(Decimal('0.01'))
+
+            if amount is None:
+                raise serializers.ValidationError({
+                    'amount': 'Each bill item must have an amount or both units and rate_per_unit.'
+                })
+
+            item = SecurityAggregateBillItem.objects.create(
+                bill=bill,
+                **{**item_data, 'amount': amount},
+            )
+            total += item.amount
+
+        if not bill.total_amount:
+            bill.total_amount = total
+            bill.save()
+
+        return bill
+
+    def update(self, instance, validated_data):
+        from decimal import Decimal
+
+        items_data = validated_data.pop('items', None)
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        if items_data is not None:
+            instance.items.all().delete()
+            total = Decimal('0')
+            for item_data in items_data:
+                amount = item_data.get('amount')
+                units = item_data.get('units')
+                rate = item_data.get('rate_per_unit')
+
+                if amount is None and units is not None and rate is not None:
+                    amount = (Decimal(str(units)) * Decimal(str(rate))).quantize(Decimal('0.01'))
+
+                if amount is None:
+                    raise serializers.ValidationError({
+                        'amount': 'Each bill item must have an amount or both units and rate_per_unit.'
+                    })
+
+                item = SecurityAggregateBillItem.objects.create(
+                    bill=instance,
+                    **{**item_data, 'amount': amount},
+                )
+                total += item.amount
+
+            if not instance.total_amount:
+                instance.total_amount = total
+
+        instance.save()
+        return instance
+
 class AdminSubscriptionPaymentSerializer(serializers.ModelSerializer):       #new field whole 
     admin_username = serializers.CharField(source='admin.username', read_only=True)
     superadmin_username = serializers.CharField(source='superadmin.username', read_only=True)
@@ -352,8 +440,14 @@ class SecurityPaymentSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = SecurityPayment
-        fields = ['id', 'admin', 'security', 'admin_username', 'security_username', 'amount', 'stripe_payment_id', 'created_at', 'status', 'payment_year', 'payment_end_date']
-        read_only_fields = ['admin_username', 'security_username', 'created_at', 'payment_end_date']
+        fields = [
+            'id', 'admin', 'security', 'admin_username', 'security_username',
+            'amount', 'stripe_payment_id', 'created_at', 'status',
+            'payment_year', 'payment_month', 'payment_end_date'
+        ]
+        read_only_fields = [
+            'admin_username', 'security_username', 'created_at', 'payment_end_date'
+        ]
  
 #For visitor section 
      

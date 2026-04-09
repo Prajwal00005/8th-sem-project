@@ -25,7 +25,12 @@ const AdminSecurityPayment = () => {
   const [error, setError] = useState("");
   const [showReminder, setShowReminder] = useState(true);
   const [selectedSecurityId, setSelectedSecurityId] = useState("");
-  const [paymentYear, setPaymentYear] = useState("");
+  const [salaryMonth, setSalaryMonth] = useState(
+    (new Date().getMonth() + 1).toString(),
+  );
+  const [paymentYear, setPaymentYear] = useState(
+    new Date().getFullYear().toString(),
+  );
 
   useEffect(() => {
     fetchSecurityPayments();
@@ -47,7 +52,11 @@ const AdminSecurityPayment = () => {
             Authorization: `Token ${localStorage.getItem("token")}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ security_id: selectedSecurityId }),
+          body: JSON.stringify({
+            security_id: selectedSecurityId,
+            payment_year: parseInt(paymentYear, 10),
+            payment_month: parseInt(salaryMonth, 10),
+          }),
         },
       );
       const data = await response.json();
@@ -74,11 +83,27 @@ const AdminSecurityPayment = () => {
     {
       label: "Date",
       key: "created_at",
-      render: (row) => new Date(row.created_at).toLocaleDateString(),
+      render: (row) => {
+        const dt = row.created_at ? new Date(row.created_at) : null;
+        const baseDate = dt ? dt.toLocaleDateString() : "-";
+        const month = row.payment_month;
+        const year = row.payment_year;
+        if (month && year) {
+          return `${baseDate} (${String(month).padStart(2, "0")}/${year})`;
+        }
+        return baseDate;
+      },
     },
     { label: "Security", key: "security_username" },
     { label: "Amount", key: "amount", render: (row) => `₹${row.amount}` },
-    { label: "Payment Year", key: "payment_year" },
+    {
+      label: "Month/Year",
+      key: "payment_period",
+      render: (row) =>
+        row.payment_month && row.payment_year
+          ? `${String(row.payment_month).padStart(2, "0")}/${row.payment_year}`
+          : row.payment_year || "-",
+    },
     {
       label: "Status",
       key: "status",
@@ -136,38 +161,77 @@ const AdminSecurityPayment = () => {
       )}
 
       {/* Reminder Section */}
-      {showReminder &&
-        securityReminder &&
-        securityReminder.reminder !==
-          "No security payments due within the next 7 days." && (
+      {(() => {
+        const list = Array.isArray(securityReminder)
+          ? securityReminder
+          : securityReminder
+            ? [securityReminder]
+            : [];
+        const first = list.find(
+          (r) =>
+            r &&
+            r.reminder &&
+            r.reminder !== "No security payments due within the next 7 days.",
+        );
+        if (!showReminder || !first) return null;
+        return (
           <div className="bg-gradient-to-r from-orange-50 to-amber-50 border border-orange-200 rounded-lg p-3 mb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
-                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  <svg
+                    className="w-4 h-4 text-white"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+                    />
                   </svg>
                 </div>
                 <div>
                   <p className="text-sm font-medium text-orange-800">
-                    {securityReminder.reminder}
+                    {first.reminder}
                   </p>
-                  <p className="text-xs text-orange-600">
-                    Due: {securityReminder.due_date} ({securityReminder.days_until_due} days left)
-                  </p>
+                  {first.due_date && first.days_until_due != null && (
+                    <p className="text-xs text-orange-600">
+                      Due: {first.due_date} ({first.days_until_due} days left)
+                    </p>
+                  )}
+                  {typeof first.amount_due === "number" &&
+                    first.amount_due > 0 && (
+                      <p className="text-xs text-orange-700 mt-1">
+                        Amount due: ₹{first.amount_due.toFixed(2)}
+                      </p>
+                    )}
                 </div>
               </div>
               <button
                 onClick={() => setShowReminder(false)}
                 className="p-1.5 hover:bg-orange-100 text-orange-600 rounded transition-colors"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
                 </svg>
               </button>
             </div>
           </div>
-        )}
+        );
+      })()}
 
       {/* Search and Payment Form */}
       <div className="flex gap-3 mb-4">
@@ -178,30 +242,62 @@ const AdminSecurityPayment = () => {
           <select
             value={selectedSecurityId}
             onChange={(e) => {
-              const user = securityUsers.find(u => u.id === parseInt(e.target.value));
+              const user = securityUsers.find(
+                (u) => u.id === parseInt(e.target.value),
+              );
               setSelectedSecurityId(user.id);
             }}
             className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
           >
             <option value="">Select a security user...</option>
-            {securityUsers.map(user => (
+            {securityUsers.map((user) => (
               <option key={user.id} value={user.id}>
                 {user.username} - {user.email}
               </option>
             ))}
           </select>
         </div>
-        <div className="flex-1">
-          <label className="block text-xs font-semibold text-slate-700 mb-1">
-            Payment Year
-          </label>
-          <input
-            type="text"
-            value={paymentYear}
-            onChange={(e) => setPaymentYear(e.target.value)}
-            placeholder="2024"
-            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
-          />
+        <div className="flex-1 grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Salary Month
+            </label>
+            <select
+              value={salaryMonth}
+              onChange={(e) => setSalaryMonth(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
+            >
+              {[
+                "January",
+                "February",
+                "March",
+                "April",
+                "May",
+                "June",
+                "July",
+                "August",
+                "September",
+                "October",
+                "November",
+                "December",
+              ].map((m, index) => (
+                <option key={m} value={index + 1}>
+                  {m}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              Salary Year
+            </label>
+            <input
+              type="number"
+              value={paymentYear}
+              onChange={(e) => setPaymentYear(e.target.value)}
+              className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-200"
+            />
+          </div>
         </div>
       </div>
 
@@ -215,8 +311,12 @@ const AdminSecurityPayment = () => {
             <div className="p-3 border-b border-slate-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-800">Payment History</h3>
-                  <p className="text-xs text-slate-500 mt-1">All security salary payment records</p>
+                  <h3 className="text-sm font-semibold text-slate-800">
+                    Payment History
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    All security salary payment records
+                  </p>
                 </div>
                 <PaymentHistoryPDF
                   title="Security Payment History"
@@ -230,18 +330,33 @@ const AdminSecurityPayment = () => {
               <table className="w-full">
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
-                    <th className="px-4 py-2 text-left text-sm font-semibold text-slate-700">Date</th>
-                    <th className="px-4 py-2 text-left text-sm font-semibold text-slate-700">Security User</th>
-                    <th className="px-4 py-2 text-left text-sm font-semibold text-slate-700">Amount</th>
-                    <th className="px-4 py-2 text-left text-sm font-semibold text-slate-700">Payment Year</th>
-                    <th className="px-4 py-2 text-left text-sm font-semibold text-slate-700">Status</th>
-                    <th className="px-4 py-2 text-left text-sm font-semibold text-slate-700">End Date</th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-slate-700">
+                      Date
+                    </th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-slate-700">
+                      Security User
+                    </th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-slate-700">
+                      Amount
+                    </th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-slate-700">
+                      Payment Year
+                    </th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-slate-700">
+                      Status
+                    </th>
+                    <th className="px-4 py-2 text-left text-sm font-semibold text-slate-700">
+                      End Date
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {securityPayments.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="px-4 py-8 text-center text-slate-500 text-sm">
+                      <td
+                        colSpan="6"
+                        className="px-4 py-8 text-center text-slate-500 text-sm"
+                      >
                         No payment history available.
                       </td>
                     </tr>

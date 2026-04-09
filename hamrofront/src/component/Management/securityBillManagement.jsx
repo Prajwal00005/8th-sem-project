@@ -5,16 +5,24 @@ const SecurityBillManagement = () => {
   const {
     rooms,
     bills,
+    aggregateBills,
     loading,
     error,
     billForm,
+    aggregateBillForm,
     setBillForm,
+    setAggregateBillForm,
     addItemRow,
+    addAggregateItemRow,
     updateItemRow,
+    updateAggregateItemRow,
     removeItemRow,
+    removeAggregateItemRow,
     fetchRooms,
     fetchBills,
+    fetchAggregateBills,
     saveBill,
+    saveAggregateBill,
     startEditBill,
     deleteBill,
     resetBillForm,
@@ -22,19 +30,28 @@ const SecurityBillManagement = () => {
   } = useSecurityBillStore();
 
   const [showModal, setShowModal] = useState(false);
+  const [showAggregateModal, setShowAggregateModal] = useState(false);
   const [viewBill, setViewBill] = useState(null);
+  const [viewAggregateBill, setViewAggregateBill] = useState(null);
   const [searchRoom, setSearchRoom] = useState("");
   const [searchName, setSearchName] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [viewType, setViewType] = useState("resident"); // 'resident' | 'adminExpense'
 
   useEffect(() => {
     fetchRooms();
     fetchBills();
-  }, [fetchRooms, fetchBills]);
+    fetchAggregateBills();
+  }, [fetchRooms, fetchBills, fetchAggregateBills]);
 
   const handleOpenCreate = () => {
     resetBillForm();
     setShowModal(true);
+  };
+
+  const handleOpenAggregateCreate = () => {
+    resetBillForm();
+    setShowAggregateModal(true);
   };
 
   const handleEdit = (bill) => {
@@ -46,6 +63,12 @@ const SecurityBillManagement = () => {
     e.preventDefault();
     const ok = await saveBill();
     if (ok) setShowModal(false);
+  };
+
+  const handleSaveAggregate = async (e) => {
+    e.preventDefault();
+    const ok = await saveAggregateBill();
+    if (ok) setShowAggregateModal(false);
   };
 
   const computeTotal = () => {
@@ -78,129 +101,237 @@ const SecurityBillManagement = () => {
           <h2 className="text-2xl font-semibold text-gray-800">
             Bill Management
           </h2>
-          <button
-            type="button"
-            onClick={handleOpenCreate}
-            className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700"
-          >
-            Create Bill
-          </button>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={handleOpenCreate}
+              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700"
+            >
+              Create Room Bill
+            </button>
+            <button
+              type="button"
+              onClick={handleOpenAggregateCreate}
+              className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-md hover:bg-emerald-700"
+            >
+              Create Admin Expense Bill
+            </button>
+          </div>
         </div>
-        <div className="flex-1 flex flex-col md:flex-row md:items-center md:justify-end gap-2 mb-5">
-          <input
-            type="text"
-            placeholder="Search by room"
-            value={searchRoom}
-            onChange={(e) => setSearchRoom(e.target.value)}
-            className="w-full md:w-40 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <input
-            type="text"
-            placeholder="Search by name"
-            value={searchName}
-            onChange={(e) => setSearchName(e.target.value)}
-            className="w-full md:w-48 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full md:w-40 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="all">All status</option>
-            <option value="paid">Paid</option>
-            <option value="unpaid">Unpaid</option>
-          </select>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-5">
+          <div className="flex-1 flex flex-col md:flex-row md:items-center md:justify-start gap-2">
+            {viewType === "resident" && (
+              <>
+                <input
+                  type="text"
+                  placeholder="Search by room"
+                  value={searchRoom}
+                  onChange={(e) => setSearchRoom(e.target.value)}
+                  className="w-full md:w-40 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <input
+                  type="text"
+                  placeholder="Search by name"
+                  value={searchName}
+                  onChange={(e) => setSearchName(e.target.value)}
+                  className="w-full md:w-48 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="w-full md:w-40 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="all">All status</option>
+                  <option value="paid">Paid</option>
+                  <option value="unpaid">Unpaid</option>
+                </select>
+              </>
+            )}
+          </div>
+          <div className="flex items-center justify-end">
+            <div className="relative inline-flex bg-gray-100 rounded-full p-1">
+              <button
+                type="button"
+                onClick={() => setViewType("resident")}
+                className={`relative z-10 px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${
+                  viewType === "resident"
+                    ? "bg-white text-blue-700 shadow"
+                    : "text-gray-600"
+                }`}
+              >
+                Resident Bills
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewType("adminExpense")}
+                className={`relative z-10 px-4 py-1.5 text-xs font-medium rounded-full transition-colors ${
+                  viewType === "adminExpense"
+                    ? "bg-white text-emerald-700 shadow"
+                    : "text-gray-600"
+                }`}
+              >
+                Admin Expense Bills
+              </button>
+            </div>
+          </div>
         </div>
 
         {error && <div className="mb-4 text-sm text-red-600">{error}</div>}
 
-        {/* Bills table */}
-        <div className="overflow-x-auto border rounded-lg mb-6">
-          <table className="min-w-full divide-y divide-gray-200 text-sm">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="px-4 py-2 text-left font-medium text-gray-700">
-                  Room
-                </th>
-                <th className="px-4 py-2 text-left font-medium text-gray-700">
-                  Resident
-                </th>
-                <th className="px-4 py-2 text-left font-medium text-gray-700">
-                  Date
-                </th>
-                <th className="px-4 py-2 text-left font-medium text-gray-700">
-                  Total Amount
-                </th>
-                <th className="px-4 py-2 text-left font-medium text-gray-700">
-                  Status
-                </th>
-                <th className="px-4 py-2 text-left font-medium text-gray-700">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100 bg-white">
-              {filteredBills.length === 0 ? (
+        {/* Bills tables, toggled by viewType */}
+        {viewType === "resident" && (
+          <div className="overflow-x-auto border rounded-lg mb-6">
+            <table className="min-w-full divide-y divide-gray-200 text-sm">
+              <thead className="bg-gray-100">
                 <tr>
-                  <td
-                    className="px-4 py-4 text-center text-gray-500 text-sm"
-                    colSpan={5}
-                  >
-                    No bills found.
-                  </td>
+                  <th className="px-4 py-2 text-left font-medium text-gray-700">
+                    Room
+                  </th>
+                  <th className="px-4 py-2 text-left font-medium text-gray-700">
+                    Resident
+                  </th>
+                  <th className="px-4 py-2 text-left font-medium text-gray-700">
+                    Date
+                  </th>
+                  <th className="px-4 py-2 text-left font-medium text-gray-700">
+                    Total Amount
+                  </th>
+                  <th className="px-4 py-2 text-left font-medium text-gray-700">
+                    Status
+                  </th>
+                  <th className="px-4 py-2 text-left font-medium text-gray-700">
+                    Actions
+                  </th>
                 </tr>
-              ) : (
-                filteredBills.map((bill) => (
-                  <tr key={bill.id}>
-                    <td className="px-4 py-2 text-gray-800">
-                      {bill.room_number}
-                    </td>
-                    <td className="px-4 py-2 text-gray-800">
-                      {bill.resident_name}
-                    </td>
-                    <td className="px-4 py-2 text-gray-800">{bill.date}</td>
-                    <td className="px-4 py-2 text-gray-800">
-                      ₹{bill.total_amount}
-                    </td>
-                    <td className="px-4 py-2">
-                      <span
-                        className={`px-2 py-1 text-xs font-semibold rounded-full ${bill.payment_status === "paid" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
-                      >
-                        {bill.payment_status === "paid" ? "Paid" : "Unpaid"}
-                      </span>
-                    </td>
-                    <td className="px-4 py-2 flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => setViewBill(bill)}
-                        className="px-3 py-1 text-xs bg-gray-100 text-gray-800 rounded-md hover:bg-gray-200"
-                      >
-                        View
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleEdit(bill)}
-                        className="px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded-md hover:bg-blue-200"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (window.confirm("Delete this bill?"))
-                            deleteBill(bill.id);
-                        }}
-                        className="px-3 py-1 text-xs bg-red-100 text-red-800 rounded-md hover:bg-red-200"
-                      >
-                        Delete
-                      </button>
+              </thead>
+              <tbody className="divide-y divide-gray-100 bg-white">
+                {filteredBills.length === 0 ? (
+                  <tr>
+                    <td
+                      className="px-4 py-4 text-center text-gray-500 text-sm"
+                      colSpan={6}
+                    >
+                      No bills found.
                     </td>
                   </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+                ) : (
+                  filteredBills.map((bill) => (
+                    <tr key={bill.id}>
+                      <td className="px-4 py-2 text-gray-800">
+                        {bill.room_number}
+                      </td>
+                      <td className="px-4 py-2 text-gray-800">
+                        {bill.resident_name}
+                      </td>
+                      <td className="px-4 py-2 text-gray-800">{bill.date}</td>
+                      <td className="px-4 py-2 text-gray-800">
+                        ₹{bill.total_amount}
+                      </td>
+                      <td className="px-4 py-2">
+                        <span
+                          className={`px-2 py-1 text-xs font-semibold rounded-full ${bill.payment_status === "paid" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
+                        >
+                          {bill.payment_status === "paid" ? "Paid" : "Unpaid"}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setViewBill(bill)}
+                          className="px-3 py-1 text-xs bg-gray-100 text-gray-800 rounded-md hover:bg-gray-200"
+                        >
+                          View
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(bill)}
+                          className="px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded-md hover:bg-blue-200"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (window.confirm("Delete this bill?"))
+                              deleteBill(bill.id);
+                          }}
+                          className="px-3 py-1 text-xs bg-red-100 text-red-800 rounded-md hover:bg-red-200"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {viewType === "adminExpense" && (
+          <div className="mt-2">
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">
+              Admin Expense Bills
+            </h3>
+            <div className="overflow-x-auto border rounded-lg mb-4">
+              <table className="min-w-full divide-y divide-gray-200 text-sm">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">
+                      Date
+                    </th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">
+                      Total Amount
+                    </th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">
+                      Status
+                    </th>
+                    <th className="px-4 py-2 text-left font-medium text-gray-700">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 bg-white">
+                  {(!aggregateBills || aggregateBills.length === 0) && (
+                    <tr>
+                      <td
+                        className="px-4 py-4 text-center text-gray-500 text-sm"
+                        colSpan={4}
+                      >
+                        No admin expense bills found.
+                      </td>
+                    </tr>
+                  )}
+                  {aggregateBills &&
+                    aggregateBills.map((bill) => (
+                      <tr key={bill.id}>
+                        <td className="px-4 py-2 text-gray-800">{bill.date}</td>
+                        <td className="px-4 py-2 text-gray-800">
+                          ₹{bill.total_amount}
+                        </td>
+                        <td className="px-4 py-2">
+                          <span
+                            className={`px-2 py-1 text-xs font-semibold rounded-full ${bill.payment_status === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}
+                          >
+                            {bill.payment_status === "paid" ? "Paid" : "Unpaid"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-2">
+                          <button
+                            type="button"
+                            onClick={() => setViewAggregateBill(bill)}
+                            className="px-3 py-1 text-xs bg-gray-100 text-gray-800 rounded-md hover:bg-gray-200"
+                          >
+                            View
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* View bill modal */}
         {viewBill && (
@@ -281,6 +412,85 @@ const SecurityBillManagement = () => {
               </div>
               <div className="text-right font-semibold text-gray-900">
                 Total: ₹{viewBill.total_amount}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* View aggregate bill modal */}
+        {viewAggregateBill && (
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-40">
+            <div className="bg-white rounded-lg shadow-lg w-full max-w-2xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">
+                  Admin Expense Bill Details
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setViewAggregateBill(null)}
+                  className="text-gray-500 hover:text-gray-700 text-xl leading-none"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="mb-4 text-sm text-gray-700 space-y-1">
+                <p>
+                  <span className="font-medium">Date:</span>{" "}
+                  {viewAggregateBill.date}
+                </p>
+                <p>
+                  <span className="font-medium">Status:</span>{" "}
+                  <span
+                    className={`px-2 py-0.5 text-xs font-semibold rounded-full ${viewAggregateBill.payment_status === "paid" ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"}`}
+                  >
+                    {viewAggregateBill.payment_status === "paid"
+                      ? "Paid"
+                      : "Unpaid"}
+                  </span>
+                </p>
+              </div>
+              <div className="overflow-x-auto border rounded-lg mb-4">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-100">
+                    <tr>
+                      <th className="px-4 py-2 text-left font-medium text-gray-700">
+                        S.N.
+                      </th>
+                      <th className="px-4 py-2 text-left font-medium text-gray-700">
+                        Item Name
+                      </th>
+                      <th className="px-4 py-2 text-left font-medium text-gray-700">
+                        Units
+                      </th>
+                      <th className="px-4 py-2 text-left font-medium text-gray-700">
+                        Rate / Unit
+                      </th>
+                      <th className="px-4 py-2 text-left font-medium text-gray-700">
+                        Amount
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 bg-white">
+                    {viewAggregateBill.items?.map((item, idx) => (
+                      <tr key={item.id || idx}>
+                        <td className="px-4 py-2 text-gray-800">{idx + 1}</td>
+                        <td className="px-4 py-2 text-gray-800">{item.name}</td>
+                        <td className="px-4 py-2 text-gray-800">
+                          {item.units ?? "-"}
+                        </td>
+                        <td className="px-4 py-2 text-gray-800">
+                          {item.rate_per_unit ?? "-"}
+                        </td>
+                        <td className="px-4 py-2 text-gray-800">
+                          ₹{item.amount}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="text-right font-semibold text-gray-900">
+                Total: ₹{viewAggregateBill.total_amount}
               </div>
             </div>
           </div>
@@ -473,6 +683,176 @@ const SecurityBillManagement = () => {
                       : editingBill
                         ? "Update Bill"
                         : "Save Bill"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Create aggregate admin expense bill modal */}
+        {showAggregateModal && (
+          <div className="fixed inset-0 z-40 flex items-center justify-center bg-black bg-opacity-40">
+            <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-800">
+                  Create Admin Expense Bill
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowAggregateModal(false)}
+                  className="text-gray-500 hover:text-gray-700 text-xl leading-none"
+                >
+                  ×
+                </button>
+              </div>
+              <form onSubmit={handleSaveAggregate} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date
+                    </label>
+                    <input
+                      type="date"
+                      value={aggregateBillForm.date}
+                      onChange={(e) =>
+                        setAggregateBillForm({ date: e.target.value })
+                      }
+                      className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto border rounded-lg">
+                  <table className="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="px-4 py-2 text-left font-medium text-gray-700">
+                          Item Name
+                        </th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-700">
+                          Units (optional)
+                        </th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-700">
+                          Rate / Unit (optional)
+                        </th>
+                        <th className="px-4 py-2 text-left font-medium text-gray-700">
+                          Amount
+                        </th>
+                        <th className="px-4 py-2" />
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 bg-white">
+                      {aggregateBillForm.items.map((item, idx) => (
+                        <tr key={idx}>
+                          <td className="px-4 py-2">
+                            <input
+                              type="text"
+                              value={item.name}
+                              onChange={(e) =>
+                                updateAggregateItemRow(idx, {
+                                  name: e.target.value,
+                                })
+                              }
+                              className="w-full border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                              placeholder="Electricity, Water, ..."
+                              required
+                            />
+                          </td>
+                          <td className="px-4 py-2">
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={item.units}
+                              onChange={(e) =>
+                                updateAggregateItemRow(idx, {
+                                  units: e.target.value,
+                                })
+                              }
+                              className="w-full border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                              placeholder="Units"
+                            />
+                          </td>
+                          <td className="px-4 py-2">
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={item.rate_per_unit}
+                              onChange={(e) =>
+                                updateAggregateItemRow(idx, {
+                                  rate_per_unit: e.target.value,
+                                })
+                              }
+                              className="w-full border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                              placeholder="Rate per unit"
+                            />
+                          </td>
+                          <td className="px-4 py-2">
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={item.amount}
+                              onChange={(e) =>
+                                updateAggregateItemRow(idx, {
+                                  amount: e.target.value,
+                                })
+                              }
+                              className="w-full border rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                              placeholder="Amount"
+                              required
+                            />
+                          </td>
+                          <td className="px-4 py-2 text-right">
+                            {aggregateBillForm.items.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeAggregateItemRow(idx)}
+                                className="text-xs text-red-600 hover:text-red-800"
+                              >
+                                Remove
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div className="flex items-center justify-between mt-3">
+                  <button
+                    type="button"
+                    onClick={addAggregateItemRow}
+                    className="text-sm text-emerald-600 hover:text-emerald-800"
+                  >
+                    + Add another item
+                  </button>
+                  <div className="text-sm font-semibold text-gray-900">
+                    Total: ₹
+                    {aggregateBillForm.items
+                      .reduce((sum, i) => {
+                        const val = parseFloat(i.amount);
+                        return !isNaN(val) ? sum + val : sum;
+                      }, 0)
+                      .toFixed(2)}
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowAggregateModal(false)}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-100"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-4 py-2 bg-emerald-600 text-white text-sm font-medium rounded-md hover:bg-emerald-700 disabled:opacity-60"
+                  >
+                    {loading ? "Saving..." : "Save Admin Expense Bill"}
                   </button>
                 </div>
               </form>

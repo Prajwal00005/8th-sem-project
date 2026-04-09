@@ -1,10 +1,31 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework import status,generics
-from .models import User, Visitor, Payment,Complaint,Room,Post, PostImage, Comment, Vote,OTP,BlogPost,Follow,ChatRoom,Message,ChatRoomName,AdminSubscriptionPayment,SecurityPayment,BlockedUser,Bill,BillItem
+from .models import (
+    User,
+    Visitor,
+    Payment,
+    Complaint,
+    Room,
+    Post,
+    PostImage,
+    Comment,
+    Vote,
+    OTP,
+    BlogPost,
+    Follow,
+    ChatRoom,
+    Message,
+    ChatRoomName,
+    AdminSubscriptionPayment,
+    SecurityPayment,
+    BlockedUser,
+    Bill,
+    BillItem,
+)
 from rest_framework.authtoken.models import Token
 from django.contrib.auth import authenticate, get_user_model
-from .serializers import UserSerializer,VisitorSerializer,PaySerializer,ComplaintSerializer,RoomSerializer,PostSerializer, CommentSerializer, VoteSerializer,BlogPostSerializer,FollowSerializer,ChatRoomSerializer,MessageSerializer,ChatRoomSerializer,MessageSerializer,AdminSubscriptionPaymentSerializer,SecurityPaymentSerializer,BillSerializer
+from .serializers import UserSerializer,VisitorSerializer,PaySerializer,ComplaintSerializer,RoomSerializer,PostSerializer, CommentSerializer, VoteSerializer,BlogPostSerializer,FollowSerializer,ChatRoomSerializer,MessageSerializer,ChatRoomSerializer,MessageSerializer,AdminSubscriptionPaymentSerializer,SecurityPaymentSerializer,BillSerializer,SecurityAggregateBillSerializer
 from django.contrib.auth.hashers import make_password
 from .permissions import IsSuperAdmin,IsAdminUser
 from rest_framework.permissions import AllowAny,IsAuthenticated
@@ -15,7 +36,7 @@ from django.conf import settings
 from datetime import datetime, timedelta
 from django.core.mail import EmailMessage
 from django.db.models.functions import TruncDay, TruncMonth
-from django.db.models import Count
+from django.db.models import Count, Sum
 from django.utils.timezone import now
 from textblob import TextBlob
 from .utils import predict_custom_sentiment
@@ -962,6 +983,85 @@ def securityBillDetail(request, bill_id):
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def securityAggregateBills(request):
+    """Security can list and create aggregate bills (expenses) for their admin."""
+
+    user = request.user
+    if user.role != 'security':
+        return Response({'error': 'Only security can manage aggregate bills.'}, status=status.HTTP_403_FORBIDDEN)
+
+    admin = getattr(user, 'created_by', None)
+    if not admin:
+        return Response({'error': 'Security is not linked to an admin.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if request.method == 'GET':
+        from .models import SecurityAggregateBill
+
+        bills = SecurityAggregateBill.objects.filter(admin=admin, security=user)
+        serializer = SecurityAggregateBillSerializer(bills, many=True)
+        return Response(serializer.data)
+
+    # POST - create aggregate bill
+    from .models import SecurityAggregateBill
+
+    bill_data = {
+        'admin': admin.id,
+        'security': user.id,
+        'date': request.data.get('date') or timezone.now().date(),
+        'total_amount': request.data.get('total_amount') or 0,
+        'payment_status': request.data.get('payment_status') or 'unpaid',
+        'items': request.data.get('items', []),
+    }
+
+    serializer = SecurityAggregateBillSerializer(data=bill_data)
+    if serializer.is_valid():
+        bill = serializer.save()
+        return Response(SecurityAggregateBillSerializer(bill).data, status=status.HTTP_201_CREATED)
+
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def securityAggregateBillDetail(request, bill_id):
+    """Retrieve, update or delete an aggregate bill (security only)."""
+
+    user = request.user
+    if user.role != 'security':
+        return Response({'error': 'Only security can manage aggregate bills.'}, status=status.HTTP_403_FORBIDDEN)
+
+    admin = getattr(user, 'created_by', None)
+    if not admin:
+        return Response({'error': 'Security is not linked to an admin.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    from .models import SecurityAggregateBill
+
+    try:
+        bill = SecurityAggregateBill.objects.get(id=bill_id, admin=admin, security=user)
+    except SecurityAggregateBill.DoesNotExist:
+        return Response({'error': 'Aggregate bill not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        serializer = SecurityAggregateBillSerializer(bill)
+        return Response(serializer.data)
+
+    if request.method == 'DELETE':
+        bill.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    # PUT - full update (including items)
+    data = request.data.copy()
+    data.setdefault('admin', admin.id)
+    data.setdefault('security', user.id)
+    serializer = SecurityAggregateBillSerializer(bill, data=data)
+    if serializer.is_valid():
+        bill = serializer.save()
+        return Response(SecurityAggregateBillSerializer(bill).data)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def residentBills(request):
@@ -1017,6 +1117,151 @@ def getAllResidentPaymentsReport(request):
     payments = qs.select_related('resident', 'room', 'admin')
     serializer = PaySerializer(payments, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def adminFinancialReport(request):
+    """Aggregate financial report for an admin.
+
+    Includes:
+    - Rent income from resident payments
+    - Bill income from paid resident bills
+    - Security salary expenses
+    - Overall income/expense/profit figures
+    - Flat transaction list for frontend reporting
+    """
+
+    user = request.user
+    if getattr(user, 'role', None) != 'admin':
+        return Response(
+            {'error': 'Only admins can view this financial report.'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
+
+    from .models import SecurityAggregateBill
+
+    rent_qs = Payment.objects.filter(
+        admin=user,
+        status__in=['paid', 'advance'],
+    ).select_related('resident', 'room')
+
+    bill_qs = Bill.objects.filter(
+        room__apartment=user,
+        payment_status='paid',
+    ).select_related('resident', 'room')
+
+    security_qs = SecurityPayment.objects.filter(
+        admin=user,
+        status='success',
+    ).select_related('security')
+
+    subscription_qs = AdminSubscriptionPayment.objects.filter(
+        admin=user,
+        status__in=['active', 'paid']
+    ).select_related('superadmin')
+
+    total_rent_income = rent_qs.aggregate(total=Sum('amount'))['total'] or 0
+    total_bill_income = bill_qs.aggregate(total=Sum('total_amount'))['total'] or 0
+    total_security_expenses = (
+        security_qs.aggregate(total=Sum('amount'))['total'] or 0
+    )
+    total_security_aggregate_expenses = (
+        SecurityAggregateBill.objects.filter(admin=user).aggregate(total=Sum('total_amount'))['total'] or 0
+    )
+    total_subscription_expenses = (
+        subscription_qs.aggregate(total=Sum('amount'))['total'] or 0
+    )
+
+    other_expenses = 0
+    total_income = total_rent_income + total_bill_income
+    total_expenses = (
+        total_security_expenses
+        + total_security_aggregate_expenses
+        + total_subscription_expenses
+        + other_expenses
+    )
+    profit_loss = total_income - total_expenses
+
+    transactions = []
+
+    for payment in rent_qs:
+        transactions.append(
+            {
+                'id': f'rent-{payment.id}',
+                'date': payment.created_at.date().isoformat(),
+                'name': getattr(payment.resident, 'username', ''),
+                'type': 'Rent',
+                'income': float(payment.amount),
+                'expense': 0.0,
+            }
+        )
+
+    for bill in bill_qs:
+        transactions.append(
+            {
+                'id': f'bill-{bill.id}',
+                'date': bill.date.isoformat(),
+                'name': getattr(bill.resident, 'username', ''),
+                'type': 'Bill',
+                'income': float(bill.total_amount),
+                'expense': 0.0,
+            }
+        )
+
+    for sp in security_qs:
+        transactions.append(
+            {
+                'id': f'security-{sp.id}',
+                'date': sp.created_at.date().isoformat(),
+                'name': getattr(sp.security, 'username', ''),
+                'type': 'Security Salary',
+                'income': 0.0,
+                'expense': float(sp.amount),
+            }
+        )
+
+    for agg in SecurityAggregateBill.objects.filter(admin=user):
+        transactions.append(
+            {
+                'id': f'security-agg-{agg.id}',
+                'date': agg.date.isoformat(),
+                'name': getattr(agg.security, 'username', ''),
+                'type': 'Security Aggregate Bill',
+                'income': 0.0,
+                'expense': float(agg.total_amount),
+            }
+        )
+
+    for sub in subscription_qs:
+        transactions.append(
+            {
+                'id': f'subscription-{sub.id}',
+                'date': sub.created_at.date().isoformat() if hasattr(sub, 'created_at') and sub.created_at else sub.subscription_end_date,
+                'name': getattr(sub.superadmin, 'username', 'Subscription'),
+                'type': 'Subscription',
+                'income': 0.0,
+                'expense': float(sub.amount),
+            }
+        )
+
+    transactions.sort(key=lambda x: x['date'], reverse=True)
+
+    data = {
+        'total_rent_income': float(total_rent_income),
+        'total_bill_income': float(total_bill_income),
+        'total_income': float(total_income),
+        'total_security_expenses': float(total_security_expenses),
+        'total_security_aggregate_expenses': float(total_security_aggregate_expenses),
+        'total_subscription_expenses': float(total_subscription_expenses),
+        'other_expenses': float(other_expenses),
+        'total_expenses': float(total_expenses),
+        'profit_loss': float(profit_loss),
+        'total_collected_rent': float(total_rent_income),
+        'transactions': transactions,
+    }
+
+    return Response(data, status=status.HTTP_200_OK)
 
 
 class createBillPaymentIntentView(APIView):
@@ -1713,9 +1958,18 @@ class CreateSecurityPaymentIntentView(APIView):
             return Response({'error': 'Only admins can make security payments'}, status=status.HTTP_403_FORBIDDEN)
 
         security_id = request.data.get('security_id')
-        payment_year = request.data.get('payment_year', datetime.now().year)
+        raw_year = request.data.get('payment_year', datetime.now().year)
+        raw_month = request.data.get('payment_month', datetime.now().month)
         if not security_id or not str(security_id).isdigit():
             return Response({'error': 'Security ID must be a valid number'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            payment_year = int(raw_year)
+            payment_month = int(raw_month)
+            if payment_month < 1 or payment_month > 12:
+                raise ValueError
+        except (TypeError, ValueError):
+            return Response({'error': 'payment_year and payment_month must be valid numbers'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
             security = User.objects.get(id=security_id, role='security', apartmentName=admin.apartmentName)
@@ -1735,11 +1989,12 @@ class CreateSecurityPaymentIntentView(APIView):
             admin=admin,
             security=security,
             payment_year=payment_year,
+            payment_month=payment_month,
             status='success'
         )
         
         if existing_payment.exists():
-            return Response({'error': f'Payment for {payment_year} already made'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': f'Payment for {payment_month}/{payment_year} already made'}, status=status.HTTP_400_BAD_REQUEST)
 
         if not security.last_salary_increase: # type: ignore
             security.last_salary_increase = security.created_at.date() # type: ignore
@@ -1756,8 +2011,12 @@ class CreateSecurityPaymentIntentView(APIView):
         adjusted_salary = float(security.salary) * salary_increase_factor # type: ignore
         amount_cents = int(adjusted_salary * 100)
 
-        period_start = datetime.strptime(f'{payment_year}-01-01', '%Y-%m-%d').date()
-        period_end = datetime.strptime(f'{payment_year}-12-31', '%Y-%m-%d').date()
+        period_start = datetime.strptime(f'{payment_year}-{payment_month:02d}-01', '%Y-%m-%d').date()
+        if payment_month == 12:
+            next_month = datetime(payment_year + 1, 1, 1).date()
+        else:
+            next_month = datetime(payment_year, payment_month + 1, 1).date()
+        period_end = next_month - timedelta(days=1)
 
         try:
             intent = stripe.PaymentIntent.create(
@@ -1769,6 +2028,7 @@ class CreateSecurityPaymentIntentView(APIView):
                     'admin_id': admin.id,
                     'security_id': security.id, # type: ignore
                     'payment_year': payment_year,
+                    'payment_month': payment_month,
                     'period_start': period_start.strftime('%Y-%m-%d'),
                     'period_end': period_end.strftime('%Y-%m-%d'),
                 }
@@ -1779,6 +2039,7 @@ class CreateSecurityPaymentIntentView(APIView):
                 'payment': {
                     'amount': adjusted_salary,
                     'payment_year': payment_year,
+                    'payment_month': payment_month,
                     'period_start': period_start.strftime('%Y-%m-%d'),
                     'period_end': period_end.strftime('%Y-%m-%d')
                 }
@@ -1814,14 +2075,40 @@ def confirmSecurityPayment(request):
             except User.DoesNotExist:
                 return Response({'error': 'Security user not found.'}, status=status.HTTP_400_BAD_REQUEST)
 
+            metadata_year = intent.metadata.get('payment_year')
+            metadata_month = intent.metadata.get('payment_month')
+            try:
+                payment_year = int(metadata_year) if metadata_year is not None else datetime.now().year
+                payment_month = int(metadata_month) if metadata_month is not None else datetime.now().month
+            except (TypeError, ValueError):
+                return Response({'error': 'Invalid payment period metadata on payment intent.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Derive period_end from metadata if present, otherwise compute end of month
+            period_end_str = intent.metadata.get('period_end')
+            if period_end_str:
+                try:
+                    period_end = datetime.strptime(period_end_str, '%Y-%m-%d').date()
+                except ValueError:
+                    period_end = None
+            else:
+                period_end = None
+
+            if period_end is None:
+                if payment_month == 12:
+                    next_month = datetime(payment_year + 1, 1, 1).date()
+                else:
+                    next_month = datetime(payment_year, payment_month + 1, 1).date()
+                period_end = next_month - timedelta(days=1)
+
             payment = SecurityPayment.objects.create(
                 admin=admin,
                 security=security,
                 amount=intent.amount / 100.0,
                 stripe_payment_id=payment_intent_id,
                 status='success',
-                payment_year=intent.metadata.get('payment_year', datetime.now().year),
-                payment_end_date=(timezone.now() + timedelta(days=365)).date()
+                payment_year=payment_year,
+                payment_month=payment_month,
+                payment_end_date=period_end,
             )
             serializer = SecurityPaymentSerializer(payment)
             return Response({
@@ -1865,12 +2152,16 @@ def recordSecurityCashPayment(request, security_id):
     except User.DoesNotExist:
         return Response({'error': 'Security user not found for your apartment'}, status=status.HTTP_404_NOT_FOUND)
 
-    # Determine payment year
+    # Determine payment year and month
     raw_year = request.data.get('payment_year')
+    raw_month = request.data.get('payment_month')
     try:
         payment_year = int(raw_year) if raw_year is not None else datetime.now().year
+        payment_month = int(raw_month) if raw_month is not None else datetime.now().month
+        if payment_month < 1 or payment_month > 12:
+            raise ValueError
     except (TypeError, ValueError):
-        return Response({'error': 'payment_year must be a valid year'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'payment_year and payment_month must be valid'}, status=status.HTTP_400_BAD_REQUEST)
 
     if not security.salary or security.salary <= 0:  # type: ignore
         return Response({'error': 'No valid salary set for this security user'}, status=status.HTTP_400_BAD_REQUEST)
@@ -1879,14 +2170,19 @@ def recordSecurityCashPayment(request, security_id):
         admin=admin,
         security=security,
         payment_year=payment_year,
+        payment_month=payment_month,
         status='success',
     )
     if existing.exists():
-        return Response({'error': f'Salary for {payment_year} already recorded'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': f'Salary for {payment_month}/{payment_year} already recorded'}, status=status.HTTP_400_BAD_REQUEST)
 
     amount = float(security.salary)  # type: ignore
-    period_start = datetime.strptime(f'{payment_year}-01-01', '%Y-%m-%d').date()
-    period_end = datetime.strptime(f'{payment_year}-12-31', '%Y-%m-%d').date()
+    period_start = datetime.strptime(f'{payment_year}-{payment_month:02d}-01', '%Y-%m-%d').date()
+    if payment_month == 12:
+        next_month = datetime(payment_year + 1, 1, 1).date()
+    else:
+        next_month = datetime(payment_year, payment_month + 1, 1).date()
+    period_end = next_month - timedelta(days=1)
 
     payment = SecurityPayment.objects.create(
         admin=admin,
@@ -1895,6 +2191,7 @@ def recordSecurityCashPayment(request, security_id):
         stripe_payment_id=f'CASH_SEC_{security.id}_{timezone.now().strftime("%Y%m%d%H%M%S")}',
         status='success',
         payment_year=payment_year,
+        payment_month=payment_month,
         payment_end_date=period_end,
     )
 

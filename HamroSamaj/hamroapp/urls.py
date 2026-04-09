@@ -37,6 +37,7 @@ urlpatterns = [
     path('stripe/connect/complete/', views.StripeConnectComplete.as_view(), name='stripeConnectComplete'),
     path('residentPayments/', views.getResidentPayments, name='get-resident-payments'),
     path('residentPaymentsReport/', views.getAllResidentPaymentsReport, name='resident-payments-report'),
+    path('adminFinancialReport/', views.adminFinancialReport, name='admin-financial-report'),
     path('confirmPayment/', views.confirmPayment, name='confirm-payment'),
     path('checkPaymentDue/', views.checkPaymentDue, name='check-payment-due'),
     path('generatePaymentHistoryPDF/', views.generatePaymentHistoryPDF, name='generate-payment-history-pdf'),
@@ -70,6 +71,8 @@ urlpatterns = [
     # Bill management
     path('bills/security/', views.securityBills, name='security-bills'),
     path('bills/security/<int:bill_id>/', views.securityBillDetail, name='security-bill-detail'),
+    path('bills/security/aggregate/', views.securityAggregateBills, name='security-aggregate-bills'),
+    path('bills/security/aggregate/<int:bill_id>/', views.securityAggregateBillDetail, name='security-aggregate-bill-detail'),
     path('bills/resident/', views.residentBills, name='resident-bills'),
     path('bills/resident/<int:bill_id>/', views.residentBillDetail, name='resident-bill-detail'),
     path('bills/resident/<int:bill_id>/create-payment-intent/', views.createBillPaymentIntentView.as_view(), name='resident-bill-create-payment-intent'),

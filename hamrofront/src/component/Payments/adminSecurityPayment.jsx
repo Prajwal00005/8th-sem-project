@@ -81,17 +81,16 @@ const AdminSecurityPayment = () => {
 
   const columns = [
     {
-      label: "Date",
+      label: "Payment Date",
       key: "created_at",
       render: (row) => {
-        const dt = row.created_at ? new Date(row.created_at) : null;
-        const baseDate = dt ? dt.toLocaleDateString() : "-";
-        const month = row.payment_month;
-        const year = row.payment_year;
-        if (month && year) {
-          return `${baseDate} (${String(month).padStart(2, "0")}/${year})`;
-        }
-        return baseDate;
+        if (!row.created_at) return "-";
+        const dt = new Date(row.created_at);
+        if (Number.isNaN(dt.getTime())) return "-";
+        const year = dt.getFullYear();
+        const month = String(dt.getMonth() + 1).padStart(2, "0");
+        const day = String(dt.getDate()).padStart(2, "0");
+        return `${year}/${month}/${day}`;
       },
     },
     { label: "Security", key: "security_username" },
@@ -331,7 +330,7 @@ const AdminSecurityPayment = () => {
                 <thead className="bg-slate-50 border-b border-slate-200">
                   <tr>
                     <th className="px-4 py-2 text-left text-sm font-semibold text-slate-700">
-                      Date
+                      Payment Date
                     </th>
                     <th className="px-4 py-2 text-left text-sm font-semibold text-slate-700">
                       Security User
@@ -340,7 +339,7 @@ const AdminSecurityPayment = () => {
                       Amount
                     </th>
                     <th className="px-4 py-2 text-left text-sm font-semibold text-slate-700">
-                      Payment Year
+                      Month/Year
                     </th>
                     <th className="px-4 py-2 text-left text-sm font-semibold text-slate-700">
                       Status
@@ -367,7 +366,18 @@ const AdminSecurityPayment = () => {
                         className="hover:bg-[#F5F8F6] transition-colors"
                       >
                         <td className="px-8 py-5 text-base text-[#2C3B2A]">
-                          {new Date(payment.created_at).toLocaleDateString()}
+                          {(() => {
+                            if (!payment.created_at) return "-";
+                            const dt = new Date(payment.created_at);
+                            if (Number.isNaN(dt.getTime())) return "-";
+                            const year = dt.getFullYear();
+                            const month = String(dt.getMonth() + 1).padStart(
+                              2,
+                              "0",
+                            );
+                            const day = String(dt.getDate()).padStart(2, "0");
+                            return `${year}/${month}/${day}`;
+                          })()}
                         </td>
                         <td className="px-8 py-5 text-base text-[#2C3B2A]">
                           {payment.security_username}
@@ -376,7 +386,9 @@ const AdminSecurityPayment = () => {
                           ₹{payment.amount}
                         </td>
                         <td className="px-8 py-5 text-base text-[#2C3B2A]">
-                          {payment.payment_year}
+                          {payment.payment_month && payment.payment_year
+                            ? `${String(payment.payment_month).padStart(2, "0")}/${payment.payment_year}`
+                            : payment.payment_year || "-"}
                         </td>
                         <td className="px-8 py-5 text-base">
                           <span

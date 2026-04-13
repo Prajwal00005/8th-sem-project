@@ -85,6 +85,7 @@ export const useAdminDashboardStore = create((set, get) => ({
       { page: "stripeSetup", label: "Payment Settings" },
       { page: "subscriptionPayment", label: "Subscription" },
       { page: "securityPayment", label: "Security Payment" },
+      { page: "billManagement", label: "Bill Management" },
       { page: "reports", label: "Reports" },
       { page: "complaints", label: "Complaints" },
     ];

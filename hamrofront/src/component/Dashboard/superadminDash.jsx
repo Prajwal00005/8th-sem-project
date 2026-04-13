@@ -132,7 +132,7 @@ const SuperadminDashboard = () => {
                     ) || 0}
                   </span>
                 </div>
-                <h3 className="text-xs font-semibold text-slate-800">Total Complaints</h3>
+                <h3 className="text-xs font-semibold text-slate-800">Total Feedback</h3>
                 <p className="text-xs text-slate-500 mt-1">All time records</p>
               </div>
 
@@ -186,7 +186,7 @@ const SuperadminDashboard = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <ChartCard
                 title="Sentiment Trends"
-                description="Admin complaint sentiments over the last 6 months"
+                description="Admin feedback sentiments over last 6 months"
                 footer="Showing positive, negative and neutral trends"
               >
                 {sentimentTrends.length > 0 ? (
@@ -262,9 +262,9 @@ const SuperadminDashboard = () => {
               </ChartCard>
 
               <ChartCard
-                title="Complaint Distribution"
-                description="Current status of all complaints"
-                footer="Showing real-time complaint status"
+                title="Feedback Distribution"
+                description="Current status of all feedback"
+                footer="Showing real-time feedback status"
               >
                 {complaintTrends.length > 0 ? (
                   <ResponsiveContainer width="100%" height={220}>
@@ -312,7 +312,7 @@ const SuperadminDashboard = () => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
                         </svg>
                       </div>
-                      <p className="text-slate-500 text-xs">No complaint data available</p>
+                      <p className="text-slate-500 text-xs">No feedback data available</p>
                     </div>
                   </div>
                 )}

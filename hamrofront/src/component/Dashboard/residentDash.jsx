@@ -4,10 +4,10 @@ import { DashboardLayout } from "../UI/dashboardlayout";
 import ProfilePage from "../Profiles/profile";
 import RentPayment from "../Payments/rentPayment";
 import UserComplaints from "../Complaints/userComplaints";
-import CommunityHub from "../Community/communityHub";
+// import CommunityHub from "../Community/communityHub";
 import VisitorSection from "../Management/visitorManagement";
 import ResidentBillManagement from "../Management/residentBillManagement";
-import ChatSection from "../chat/chatSection";
+// import ChatSection from "../chat/chatSection";
 import ChartCard from "../UI/chartCard";
 import {
   Bar,
@@ -101,8 +101,8 @@ const ResidentDashboard = () => {
     { label: "Bill Management", page: "bills" },
     { label: "Visitors", page: "visitors" },
     { label: "Complaints", page: "complaints" },
-    { label: "Community", page: "community-hub" },
-    { label: "Messages", page: "chat" },
+    // { label: "Community", page: "community-hub" },
+    // { label: "Messages", page: "chat" },
   ];
 
   const renderContent = () => {
@@ -117,10 +117,10 @@ const ResidentDashboard = () => {
         return <VisitorSection userRole="resident" />;
       case "complaints":
         return <UserComplaints />;
-      case "community-hub":
-        return <CommunityHub />;
-      case "chat":
-        return <ChatSection />;
+      // case "community-hub":
+      //   return <CommunityHub />;
+      // case "chat":
+      //   return <ChatSection />;
       default:
         return (
           <div className="space-y-4 p-4">
@@ -269,32 +269,26 @@ const ResidentDashboard = () => {
               <div className="bg-white/70 backdrop-blur-sm rounded-lg border border-white/50 shadow-sm p-4">
                 <div className="mb-4">
                   <h3 className="text-lg font-semibold text-slate-800">Quick Actions</h3>
-                  <p className="text-xs text-slate-500 mt-1">Common tasks and features</p>
+                  <p className="text-xs text-slate-500 mt-1">Essential tasks and features</p>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     onClick={() => setCurrentPage("rent")}
-                    className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white p-3 rounded-lg text-xs font-medium shadow-md transition-all"
+                    className="bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white p-3 rounded-lg text-xs font-medium shadow-md transition-all flex items-center justify-center gap-2"
                   >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
                     Pay Rent
                   </button>
                   <button
                     onClick={() => setCurrentPage("complaints")}
-                    className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white p-3 rounded-lg text-xs font-medium shadow-md transition-all"
+                    className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white p-3 rounded-lg text-xs font-medium shadow-md transition-all flex items-center justify-center gap-2"
                   >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
                     File Complaint
-                  </button>
-                  <button
-                    onClick={() => setCurrentPage("visitors")}
-                    className="bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-600 hover:to-pink-700 text-white p-3 rounded-lg text-xs font-medium shadow-md transition-all"
-                  >
-                    Manage Visitors
-                  </button>
-                  <button
-                    onClick={() => setCurrentPage("community-hub")}
-                    className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white p-3 rounded-lg text-xs font-medium shadow-md transition-all"
-                  >
-                    Community Hub
                   </button>
                 </div>
               </div>
@@ -302,19 +296,6 @@ const ResidentDashboard = () => {
 
             {/* Additional Features */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="bg-white/70 backdrop-blur-sm rounded-lg border border-white/50 shadow-sm p-4">
-                <div className="mb-4">
-                  <h3 className="text-lg font-semibold text-slate-800">Messages</h3>
-                  <p className="text-xs text-slate-500 mt-1">Connect with other residents</p>
-                </div>
-                <button
-                  onClick={() => setCurrentPage("chat")}
-                  className="w-full bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white px-4 py-2.5 rounded-lg text-sm font-medium shadow-md transition-all"
-                >
-                  Go to Chat
-                </button>
-              </div>
-              
               <div className="bg-white/70 backdrop-blur-sm rounded-lg border border-white/50 shadow-sm p-4">
                 <div className="mb-4">
                   <h3 className="text-lg font-semibold text-slate-800">Bill Management</h3>

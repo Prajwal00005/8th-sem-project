@@ -83,7 +83,9 @@ export const DashboardLayout = ({
       </button>
 
       {/* Sidebar */}
-      <div className={`${isCollapsed ? "w-20" : "w-72"} fixed lg:relative h-full bg-white/90 backdrop-blur-sm border-r border-slate-200 z-40 transition-all duration-300 flex flex-col overflow-hidden ${!isMobileMenuOpen && isCollapsed ? "lg:block hidden" : ""} ${isMobileMenuOpen ? "block" : "lg:block hidden"}`}>
+      <div
+        className={`${isCollapsed ? "w-20" : "w-72"} fixed lg:relative h-full bg-white/90 backdrop-blur-sm border-r border-slate-200 z-40 transition-all duration-300 flex flex-col overflow-x-hidden  ${!isMobileMenuOpen && isCollapsed ? "lg:block hidden" : ""} ${isMobileMenuOpen ? "block" : "lg:block hidden"}`}
+      >
         {/* Header */}
         <div className="p-6 border-b border-slate-200">
           <div className="flex items-center justify-between">
@@ -112,8 +114,8 @@ export const DashboardLayout = ({
           </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 p-4 overflow-y-auto">
+        {/* Navigation - scrollable list only */}
+        <nav className="flex-1 p-2 overflow-y-auto no-scrollbar">
           <div className="space-y-1">
             {sidebarItems.map((item, index) => (
               <button
@@ -128,7 +130,9 @@ export const DashboardLayout = ({
                     : "text-slate-600 hover:bg-slate-100 hover:text-slate-800"
                 }`}
               >
-                <span className={`text-lg ${currentPage === item.page ? "text-blue-600" : "text-slate-400"}`}>
+                <span
+                  className={`text-lg ${currentPage === item.page ? "text-blue-600" : "text-slate-400"}`}
+                >
                   {getIcon(item.label)}
                 </span>
                 {!isCollapsed && (
@@ -152,10 +156,12 @@ export const DashboardLayout = ({
                 : "text-slate-600 hover:bg-slate-100 hover:text-slate-800"
             }`}
           >
-            <FiUser className={`text-lg ${currentPage === "profile" ? "text-blue-600" : "text-slate-400"}`} />
+            <FiUser
+              className={`text-lg ${currentPage === "profile" ? "text-blue-600" : "text-slate-400"}`}
+            />
             {!isCollapsed && <span className="font-medium">Profile</span>}
           </button>
-          
+
           <button
             onClick={handleLogout}
             className="w-full px-4 py-3 rounded-xl flex items-center gap-4 text-red-500 hover:bg-red-50 hover:text-red-600 transition-all duration-200"

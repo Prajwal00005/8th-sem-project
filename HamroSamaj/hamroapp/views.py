@@ -1091,6 +1091,70 @@ def residentBillDetail(request, bill_id):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def adminAggregateBills(request):
+    """List aggregate bills (expenses) for the logged-in admin.
+
+    Each record includes:
+    - security_name: security who submitted the bill
+    - date: bill date
+    - total_amount: full aggregate bill (owner expense)
+    - payment_status: paid / unpaid
+    - shared_amount: total of resident bills on the same date that have been paid
+    """
+
+    user = request.user
+    if getattr(user, 'role', None) != 'admin':
+        return Response({'error': 'Only admins can view aggregate bills.'}, status=status.HTTP_403_FORBIDDEN)
+
+    from .models import SecurityAggregateBill
+
+    aggregate_qs = SecurityAggregateBill.objects.filter(admin=user).select_related('security').order_by('-created_at')
+
+    data = []
+    for agg in aggregate_qs:
+        # Shared amount: sum of all resident bills for this admin on the same date that are paid
+        shared_total = Bill.objects.filter(
+            room__apartment=user,
+            date=agg.date,
+            payment_status='paid',
+        ).aggregate(total=Sum('total_amount'))['total'] or 0
+
+        serialized = SecurityAggregateBillSerializer(agg).data
+        serialized['shared_amount'] = float(shared_total)
+        data.append(serialized)
+
+    return Response(data, status=status.HTTP_200_OK)
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def adminAggregateBillUpdateStatus(request, bill_id):
+    """Allow admin to mark an aggregate bill as paid/unpaid."""
+
+    user = request.user
+    if getattr(user, 'role', None) != 'admin':
+        return Response({'error': 'Only admins can update aggregate bills.'}, status=status.HTTP_403_FORBIDDEN)
+
+    from .models import SecurityAggregateBill
+
+    try:
+        bill = SecurityAggregateBill.objects.get(id=bill_id, admin=user)
+    except SecurityAggregateBill.DoesNotExist:
+        return Response({'error': 'Aggregate bill not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    new_status = request.data.get('payment_status')
+    if new_status not in ['paid', 'unpaid']:
+        return Response({'error': 'Invalid payment_status. Use "paid" or "unpaid".'}, status=status.HTTP_400_BAD_REQUEST)
+
+    bill.payment_status = new_status
+    bill.save()
+
+    serialized = SecurityAggregateBillSerializer(bill).data
+    return Response(serialized, status=status.HTTP_200_OK)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def getAllResidentPaymentsReport(request):
     """Report of resident rent/bill payments.
 

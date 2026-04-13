@@ -373,7 +373,7 @@ const UserManagement = () => {
                               title="Record Manual Rent"
                             >
                               <svg
-                                className="w-4 h-4"
+                                className="w-6 h-6"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -386,14 +386,14 @@ const UserManagement = () => {
                                 />
                               </svg>
                             </button>
-                            {roomDetails && (
+                            {/* {roomDetails && (
                               <button
                                 onClick={() => openManualBillModal(user)}
                                 className="p-2 text-slate-600 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
                                 title="Record Manual Bill"
                               >
                                 <svg
-                                  className="w-4 h-4"
+                                  className="w-6 h-6"
                                   fill="none"
                                   stroke="currentColor"
                                   viewBox="0 0 24 24"
@@ -406,7 +406,7 @@ const UserManagement = () => {
                                   />
                                 </svg>
                               </button>
-                            )}
+                            )} */}
                           </>
                         )}
                         {isSecurity && (
@@ -416,7 +416,7 @@ const UserManagement = () => {
                             title="Record Manual Salary"
                           >
                             <svg
-                              className="w-4 h-4"
+                              className="w-6 h-6"
                               fill="none"
                               stroke="currentColor"
                               viewBox="0 0 24 24"
@@ -436,7 +436,7 @@ const UserManagement = () => {
                           title="Edit"
                         >
                           <svg
-                            className="w-4 h-4"
+                            className="w-6 h-6"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -455,7 +455,7 @@ const UserManagement = () => {
                           title="Delete"
                         >
                           <svg
-                            className="w-4 h-4"
+                            className="w-6 h-6"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"

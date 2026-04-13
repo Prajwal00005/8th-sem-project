@@ -36,7 +36,7 @@ export const useSuperadminDashboardStore = create((set, get) => ({
     { page: "dashboard", label: "Dashboard" },
     { page: "sadminManagement", label: "Admin Management" },
     { page: "stripeSetup", label: "Payment Settings" },
-    { page: "SAComplaints", label: "Complaints" },
+    { page: "SAComplaints", label: "Feedback" },
     { page: "blogManagement", label: "Blog Management" },
     { page: "reports", label: "Reports" },
   ],

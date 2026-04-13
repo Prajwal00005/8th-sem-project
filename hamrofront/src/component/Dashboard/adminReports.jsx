@@ -124,11 +124,11 @@ const AdminReports = () => {
         <>
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white/70 backdrop-blur-sm rounded-xl shadow-lg border border-white/50 p-4 hover:shadow-xl transition-all duration-300">
+            <div className="bg-white/70 backdrop-blur-sm rounded-xl shadow-lg border border-white/50 p-3 hover:shadow-xl transition-all duration-300">
               <div className="flex items-center justify-between mb-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
+                <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
                   <svg
-                    className="w-4 h-4 text-white"
+                    className="w-3 h-3 text-white"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -141,19 +141,19 @@ const AdminReports = () => {
                     />
                   </svg>
                 </div>
-                <span className="text-lg font-bold text-slate-800">
+                <span className="text-sm font-bold text-slate-800">
                   {formatCurrency(report?.total_rent_income)}
                 </span>
               </div>
-              <h3 className="text-sm font-semibold text-slate-800">Rent Income</h3>
+              <h3 className="text-xs font-semibold text-slate-800">Rent Income</h3>
               <p className="text-xs text-slate-500 mt-1">Monthly rent collections</p>
             </div>
 
-            <div className="bg-white/70 backdrop-blur-sm rounded-xl shadow-lg border border-white/50 p-4 hover:shadow-xl transition-all duration-300">
+            <div className="bg-white/70 backdrop-blur-sm rounded-xl shadow-lg border border-white/50 p-3 hover:shadow-xl transition-all duration-300">
               <div className="flex items-center justify-between mb-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
+                <div className="w-6 h-6 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
                   <svg
-                    className="w-4 h-4 text-white"
+                    className="w-3 h-3 text-white"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -166,19 +166,19 @@ const AdminReports = () => {
                     />
                   </svg>
                 </div>
-                <span className="text-lg font-bold text-slate-800">
+                <span className="text-sm font-bold text-slate-800">
                   {formatCurrency(report?.total_bill_income)}
                 </span>
               </div>
-              <h3 className="text-sm font-semibold text-slate-800">Bill Income</h3>
+              <h3 className="text-xs font-semibold text-slate-800">Bill Income</h3>
               <p className="text-xs text-slate-500 mt-1">Individual bill payments</p>
             </div>
 
-            <div className="bg-white/70 backdrop-blur-sm rounded-xl shadow-lg border border-white/50 p-4 hover:shadow-xl transition-all duration-300">
+            <div className="bg-white/70 backdrop-blur-sm rounded-xl shadow-lg border border-white/50 p-3 hover:shadow-xl transition-all duration-300">
               <div className="flex items-center justify-between mb-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg flex items-center justify-center">
+                <div className="w-6 h-6 bg-gradient-to-br from-orange-500 to-red-600 rounded-lg flex items-center justify-center">
                   <svg
-                    className="w-4 h-4 text-white"
+                    className="w-3 h-3 text-white"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -191,23 +191,23 @@ const AdminReports = () => {
                     />
                   </svg>
                 </div>
-                <span className="text-lg font-bold text-slate-800">
+                <span className="text-sm font-bold text-slate-800">
                   {formatCurrency(report?.total_expenses)}
                 </span>
               </div>
-              <h3 className="text-sm font-semibold text-slate-800">Total Expenses</h3>
+              <h3 className="text-xs font-semibold text-slate-800">Total Expenses</h3>
               <p className="text-xs text-slate-500 mt-1">Maintenance & operations</p>
             </div>
 
-            <div className="bg-white/70 backdrop-blur-sm rounded-xl shadow-lg border border-white/50 p-4 hover:shadow-xl transition-all duration-300">
+            <div className="bg-white/70 backdrop-blur-sm rounded-xl shadow-lg border border-white/50 p-3 hover:shadow-xl transition-all duration-300">
               <div className="flex items-center justify-between mb-2">
-                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                <div className={`w-6 h-6 rounded-lg flex items-center justify-center ${
                   (report?.profit_loss || 0) >= 0
                     ? "bg-gradient-to-br from-emerald-500 to-green-600"
                     : "bg-gradient-to-br from-red-500 to-pink-600"
                 }`}>
                   <svg
-                    className="w-4 h-4 text-white"
+                    className="w-3 h-3 text-white"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -220,13 +220,13 @@ const AdminReports = () => {
                     />
                   </svg>
                 </div>
-                <span className={`text-lg font-bold ${
+                <span className={`text-sm font-bold ${
                   (report?.profit_loss || 0) >= 0 ? "text-emerald-600" : "text-red-600"
                 }`}>
                   {formatCurrency(report?.profit_loss)}
                 </span>
               </div>
-              <h3 className="text-sm font-semibold text-slate-800">Profit / Loss</h3>
+              <h3 className="text-xs font-semibold text-slate-800">Profit / Loss</h3>
               <p className="text-xs text-slate-500 mt-1">Net financial result</p>
             </div>
           </div>

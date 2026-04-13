@@ -43,11 +43,26 @@ const SecurityStripeSetup = () => {
 
   const columns = [
     { label: "Admin", key: "admin_username" },
-    { label: "Payment Year", key: "payment_year" },
     {
-      label: "Date",
+      label: "Month/Year",
+      key: "payment_period",
+      render: (row) =>
+        row.payment_month && row.payment_year
+          ? `${String(row.payment_month).padStart(2, "0")}/${row.payment_year}`
+          : row.payment_year || "-",
+    },
+    {
+      label: "Payment Date",
       key: "created_at",
-      render: (row) => new Date(row.created_at).toLocaleDateString(),
+      render: (row) => {
+        if (!row.created_at) return "-";
+        const dt = new Date(row.created_at);
+        if (Number.isNaN(dt.getTime())) return "-";
+        const year = dt.getFullYear();
+        const month = String(dt.getMonth() + 1).padStart(2, "0");
+        const day = String(dt.getDate()).padStart(2, "0");
+        return `${year}/${month}/${day}`;
+      },
     },
     { label: "Amount", key: "amount", render: (row) => `₹${row.amount}` },
     {
@@ -211,10 +226,10 @@ const SecurityStripeSetup = () => {
                           Admin
                         </th>
                         <th className="px-4 py-2 text-left text-xs font-semibold text-slate-700">
-                          Payment Year
+                          Month/Year
                         </th>
                         <th className="px-4 py-2 text-left text-xs font-semibold text-slate-700">
-                          Date
+                          Payment Date
                         </th>
                         <th className="px-4 py-2 text-left text-xs font-semibold text-slate-700">
                           Amount
@@ -234,10 +249,23 @@ const SecurityStripeSetup = () => {
                             {payment.admin_username}
                           </td>
                           <td className="px-4 py-2 text-xs text-slate-600">
-                            {payment.payment_year}
+                            {payment.payment_month && payment.payment_year
+                              ? `${String(payment.payment_month).padStart(2, "0")}/${payment.payment_year}`
+                              : payment.payment_year || "-"}
                           </td>
                           <td className="px-4 py-2 text-xs text-slate-600">
-                            {new Date(payment.created_at).toLocaleDateString()}
+                            {(() => {
+                              if (!payment.created_at) return "-";
+                              const dt = new Date(payment.created_at);
+                              if (Number.isNaN(dt.getTime())) return "-";
+                              const year = dt.getFullYear();
+                              const month = String(dt.getMonth() + 1).padStart(
+                                2,
+                                "0",
+                              );
+                              const day = String(dt.getDate()).padStart(2, "0");
+                              return `${year}/${month}/${day}`;
+                            })()}
                           </td>
                           <td className="px-4 py-2 text-xs text-slate-800">
                             ₹{payment.amount}

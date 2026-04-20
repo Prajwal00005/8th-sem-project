@@ -2,9 +2,43 @@ import { create } from "zustand";
 import axios from "../utils/axiosConfig";
 import { toast } from "react-toastify";
 
+let adminListRequestSeq = 0;
+
 export const useSadminManagementStore = create((set, get) => ({
   admins: [],
   filteredAdmins: [],
+  reportAdmins: [],
+  reportStats: {
+    totalAdmins: 0,
+    subscribedCount: 0,
+    unpaidCount: 0,
+    totalAmount: 0,
+    collectedAmount: 0,
+    outstandingAmount: 0,
+  },
+  isLoadingAdmins: false,
+  isLoadingReports: false,
+  adminPagination: {
+    page: 1,
+    pageSize: 15,
+    total: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrevious: false,
+  },
+  reportPagination: {
+    page: 1,
+    pageSize: 15,
+    total: 0,
+    totalPages: 0,
+    hasNext: false,
+    hasPrevious: false,
+  },
+  reportFilters: {
+    status: "all",
+    dateFrom: "",
+    dateTo: "",
+  },
   formData: {
     username: "",
     email: "",
@@ -22,15 +56,156 @@ export const useSadminManagementStore = create((set, get) => ({
   setEditingAdmin: (admin) => set({ editingAdmin: admin }),
   setIsFormVisible: (visible) => set({ isFormVisible: visible }),
   setSearchTerm: (term) => set({ searchTerm: term }),
+  setAdminPage: (page) =>
+    set((state) => ({
+      adminPagination: { ...state.adminPagination, page: Math.max(1, page) },
+    })),
+  setAdminPageSize: (pageSize) =>
+    set((state) => ({
+      adminPagination: {
+        ...state.adminPagination,
+        pageSize,
+        page: 1,
+      },
+    })),
+  setReportPage: (page) =>
+    set((state) => ({
+      reportPagination: { ...state.reportPagination, page: Math.max(1, page) },
+    })),
+  setReportPageSize: (pageSize) =>
+    set((state) => ({
+      reportPagination: {
+        ...state.reportPagination,
+        pageSize,
+        page: 1,
+      },
+    })),
+  setReportFilters: (updates) =>
+    set((state) => ({
+      reportFilters: { ...state.reportFilters, ...updates },
+    })),
 
-  fetchAdmins: async () => {
+  fetchAdmins: async ({ page, pageSize, search } = {}) => {
+    const requestSeq = ++adminListRequestSeq;
     try {
+      const state = get();
+      const nextPage = page ?? state.adminPagination.page;
+      const nextPageSize = pageSize ?? state.adminPagination.pageSize;
+      const nextSearch = search ?? state.searchTerm;
+
+      set({ isLoadingAdmins: true });
+
+      const params = {
+        page: nextPage,
+        page_size: nextPageSize,
+      };
+
+      if (nextSearch) {
+        params.search = nextSearch;
+      }
+
       const response = await axios.get("/api/v1/adminList/", {
+        params,
         headers: { Authorization: `Token ${localStorage.getItem("token")}` },
       });
-      set({ admins: response.data, filteredAdmins: response.data });
+
+      if (requestSeq !== adminListRequestSeq) {
+        return;
+      }
+
+      const results = response.data?.results || [];
+      const pagination = response.data?.pagination || {};
+
+      set({
+        admins: results,
+        filteredAdmins: results,
+        adminPagination: {
+          page: pagination.page ?? nextPage,
+          pageSize: pagination.page_size ?? nextPageSize,
+          total: pagination.total ?? results.length,
+          totalPages: pagination.total_pages ?? 1,
+          hasNext: pagination.has_next ?? false,
+          hasPrevious: pagination.has_previous ?? false,
+        },
+      });
     } catch (error) {
       console.error("Failed to fetch admins:", error);
+    } finally {
+      if (requestSeq === adminListRequestSeq) {
+        set({ isLoadingAdmins: false });
+      }
+    }
+  },
+
+  fetchReportAdmins: async ({
+    page,
+    pageSize,
+    status,
+    dateFrom,
+    dateTo,
+  } = {}) => {
+    try {
+      const state = get();
+      const nextPage = page ?? state.reportPagination.page;
+      const nextPageSize = pageSize ?? state.reportPagination.pageSize;
+      const nextStatus = status ?? state.reportFilters.status;
+      const nextDateFrom = dateFrom ?? state.reportFilters.dateFrom;
+      const nextDateTo = dateTo ?? state.reportFilters.dateTo;
+
+      set({ isLoadingReports: true });
+
+      const params = {
+        page: nextPage,
+        page_size: nextPageSize,
+      };
+
+      if (nextStatus && nextStatus !== "all") {
+        params.status = nextStatus;
+      }
+      if (nextDateFrom) {
+        params.date_from = nextDateFrom;
+      }
+      if (nextDateTo) {
+        params.date_to = nextDateTo;
+      }
+
+      const response = await axios.get("/api/v1/adminList/", {
+        params,
+        headers: { Authorization: `Token ${localStorage.getItem("token")}` },
+      });
+
+      const results = response.data?.results || [];
+      const pagination = response.data?.pagination || {};
+      const stats = response.data?.stats || {};
+
+      set({
+        reportAdmins: results,
+        reportPagination: {
+          page: pagination.page ?? nextPage,
+          pageSize: pagination.page_size ?? nextPageSize,
+          total: pagination.total ?? results.length,
+          totalPages: pagination.total_pages ?? 1,
+          hasNext: pagination.has_next ?? false,
+          hasPrevious: pagination.has_previous ?? false,
+        },
+        reportStats: {
+          totalAdmins: stats.total_admins ?? 0,
+          subscribedCount: stats.subscribed_count ?? 0,
+          unpaidCount: stats.unpaid_count ?? 0,
+          totalAmount: stats.total_amount ?? 0,
+          collectedAmount: stats.collected_amount ?? 0,
+          outstandingAmount: stats.outstanding_amount ?? 0,
+        },
+        reportFilters: {
+          status: nextStatus,
+          dateFrom: nextDateFrom,
+          dateTo: nextDateTo,
+        },
+      });
+    } catch (error) {
+      console.error("Failed to fetch report admins:", error);
+    } finally {
+      set({ isLoadingReports: false });
     }
   },
 
@@ -51,10 +226,7 @@ export const useSadminManagementStore = create((set, get) => ({
         },
       );
       toast.success("Admin added successfully");
-      set((state) => ({
-        admins: [...state.admins, response.data],
-        filteredAdmins: [...state.admins, response.data],
-      }));
+      await get().fetchAdmins({ page: 1 });
       get().resetForm();
       set({ isFormVisible: false });
     } catch (error) {
@@ -91,14 +263,6 @@ export const useSadminManagementStore = create((set, get) => ({
       toast.success("Admin updated successfully");
       await get().fetchAdmins(); // Refresh admin list
       get().resetForm();
-      set((state) => ({
-        admins: state.admins.map((admin) =>
-          admin.id === editingAdmin.id ? response.data : admin,
-        ),
-        filteredAdmins: state.admins.map((admin) =>
-          admin.id === editingAdmin.id ? response.data : admin,
-        ),
-      }));
       get().resetForm();
       set({ editingAdmin: null, isFormVisible: false });
     } catch (error) {
@@ -122,12 +286,6 @@ export const useSadminManagementStore = create((set, get) => ({
         headers: { Authorization: `Token ${localStorage.getItem("token")}` },
       });
       toast.success("Admin deleted successfully");
-      set((state) => ({
-        admins: state.admins.filter((admin) => admin.id !== adminId),
-        filteredAdmins: state.filteredAdmins.filter(
-          (admin) => admin.id !== adminId,
-        ),
-      }));
       await get().fetchAdmins();
     } catch (error) {
       console.error(
@@ -234,23 +392,7 @@ export const useSadminManagementStore = create((set, get) => ({
   },
 
   filterAdmins: () => {
-    const { admins, searchTerm } = get();
-    let filtered = admins;
-
-    if (searchTerm) {
-      const term = searchTerm.toLowerCase();
-      filtered = filtered.filter((admin) => {
-        const username = (admin.username || "").toLowerCase();
-        const email = (admin.email || "").toLowerCase();
-        const apartment = (admin.apartmentName || "").toLowerCase();
-        return (
-          username.includes(term) ||
-          email.includes(term) ||
-          apartment.includes(term)
-        );
-      });
-    }
-
-    set({ filteredAdmins: filtered });
+    // Search filtering is now handled by the backend.
+    return;
   },
 }));

@@ -4,6 +4,8 @@ import { Edit3, Trash2, UserPlus, X, Eye, CreditCard } from "lucide-react";
 import { Input } from "../UI/input";
 import { Button } from "../UI/button";
 
+const PAGE_SIZE_OPTIONS = [10, 15, 25, 50];
+
 const SadminManagement = () => {
   const {
     filteredAdmins,
@@ -11,15 +13,18 @@ const SadminManagement = () => {
     editingAdmin,
     isFormVisible,
     searchTerm,
+    isLoadingAdmins,
+    adminPagination,
     setFormData,
     setSearchTerm,
     fetchAdmins,
+    setAdminPage,
+    setAdminPageSize,
     handleAddAdmin,
     handleEditAdmin,
     handleDeleteAdmin,
     startEditing,
     toggleFormVisibility,
-    filterAdmins,
     toggleAdminAccess,
     recordCashSubscription,
   } = useSadminManagementStore();
@@ -31,14 +36,28 @@ const SadminManagement = () => {
   const [showManualPaymentConfirm, setShowManualPaymentConfirm] =
     useState(false);
   const [manualPaymentAdmin, setManualPaymentAdmin] = useState(null);
+  const [debouncedSearch, setDebouncedSearch] = useState(searchTerm);
 
   useEffect(() => {
-    fetchAdmins();
-  }, [fetchAdmins]);
+    const debounce = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+    }, 300);
+
+    return () => clearTimeout(debounce);
+  }, [searchTerm]);
 
   useEffect(() => {
-    filterAdmins();
-  }, [searchTerm, filterAdmins]);
+    fetchAdmins({
+      page: adminPagination.page,
+      pageSize: adminPagination.pageSize,
+      search: debouncedSearch,
+    });
+  }, [
+    adminPagination.page,
+    adminPagination.pageSize,
+    debouncedSearch,
+    fetchAdmins,
+  ]);
 
   const confirmDelete = (admin) => {
     setAdminToDelete(admin);
@@ -93,28 +112,70 @@ const SadminManagement = () => {
         </Button>
       </div>
 
-      {/* Search Section */}
-      <div className="relative max-w-xs">
-        <Input
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search apartments..."
-          className="pl-8 h-8 text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
-        />
-        <div className="absolute left-2 top-1/2 transform -translate-y-1/2">
-          <svg
-            className="w-3 h-3 text-slate-400"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+      {/* Search and Controls */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div className="relative max-w-xs w-full">
+          <Input
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setAdminPage(1);
+            }}
+            placeholder="Search apartments..."
+            className="pl-8 h-8 text-sm border-slate-200 focus:border-blue-500 focus:ring-blue-500/20"
+          />
+          <div className="absolute left-2 top-1/2 transform -translate-y-1/2">
+            <svg
+              className="w-3 h-3 text-slate-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
+            </svg>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <label className="text-xs text-slate-600">Page size</label>
+          <select
+            value={adminPagination.pageSize}
+            onChange={(e) => setAdminPageSize(Number(e.target.value))}
+            className="h-8 rounded-md border border-slate-300 bg-white px-2 text-xs"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-            />
-          </svg>
+            {PAGE_SIZE_OPTIONS.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+
+          {adminPagination.hasPrevious && adminPagination.total > 0 && (
+            <Button
+              variant="secondary"
+              className="h-8 px-3 text-xs"
+              disabled={isLoadingAdmins}
+              onClick={() => setAdminPage(adminPagination.page - 1)}
+            >
+              Previous
+            </Button>
+          )}
+
+          {adminPagination.hasNext && adminPagination.total > 0 && (
+            <Button
+              variant="secondary"
+              className="h-8 px-3 text-xs"
+              disabled={isLoadingAdmins}
+              onClick={() => setAdminPage(adminPagination.page + 1)}
+            >
+              Next
+            </Button>
+          )}
         </div>
       </div>
 
@@ -142,103 +203,132 @@ const SadminManagement = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {filteredAdmins.map((admin) => (
-                <tr
-                  key={admin.id}
-                  className="hover:bg-slate-50 transition-colors"
-                >
-                  <td className="px-4 py-2">
-                    <div className="font-medium text-slate-800 text-sm">
-                      {admin.apartmentName}
-                    </div>
-                  </td>
-                  <td className="px-4 py-2">
-                    <div className="font-semibold text-slate-800 text-sm">
-                      ₹
-                      {admin.subscription_price
-                        ? Number(admin.subscription_price).toFixed(2)
-                        : "0.00"}
-                    </div>
-                  </td>
-                  <td className="px-4 py-2">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${getSubscriptionStatusClasses(admin.subscription_status)}`}
-                    >
-                      {admin.subscription_status || "N/A"}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2 text-slate-600 text-xs">
-                    {admin.subscription_end_date
-                      ? new Date(
-                          admin.subscription_end_date,
-                        ).toLocaleDateString()
-                      : "—"}
-                  </td>
-                  <td className="px-4 py-2">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          setViewAdmin(admin);
-                          setShowViewModal(true);
-                        }}
-                        className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                        title="View Details"
-                      >
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => startEditing(admin)}
-                        className="p-1.5 text-slate-600 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
-                        title="Edit"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setManualPaymentAdmin(admin);
-                          setShowManualPaymentConfirm(true);
-                        }}
-                        className="p-1.5 text-slate-600 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
-                        title="Record Payment"
-                      >
-                        <CreditCard className="w-3.5 h-3.5" />
-                      </button>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                          type="checkbox"
-                          checked={admin.is_active}
-                          onChange={() =>
-                            toggleAdminAccess(admin.id, !admin.is_active)
-                          }
-                          className="sr-only peer"
-                        />
-                        <div
-                          className={`w-8 h-4 rounded-full transition-colors ${
-                            admin.is_active ? "bg-green-500" : "bg-slate-300"
-                          } peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300`}
-                        >
-                          <div
-                            className={`absolute top-0.5 left-0.5 bg-white w-3 h-3 rounded-full transition-transform ${
-                              admin.is_active
-                                ? "translate-x-4"
-                                : "translate-x-0"
-                            }`}
-                          />
-                        </div>
-                      </label>
-                      <button
-                        onClick={() => confirmDelete(admin)}
-                        className="p-1.5 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-                        title="Delete"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+              {isLoadingAdmins ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-4 py-10 text-center text-sm text-slate-500"
+                  >
+                    Loading admins...
                   </td>
                 </tr>
-              ))}
+              ) : filteredAdmins.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-4 py-10 text-center text-sm text-slate-500"
+                  >
+                    No admins found.
+                  </td>
+                </tr>
+              ) : (
+                filteredAdmins.map((admin) => (
+                  <tr
+                    key={admin.id}
+                    className="hover:bg-slate-50 transition-colors"
+                  >
+                    <td className="px-4 py-2">
+                      <div className="font-medium text-slate-800 text-sm">
+                        {admin.apartmentName}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2">
+                      <div className="font-semibold text-slate-800 text-sm">
+                        ₹
+                        {admin.subscription_price
+                          ? Number(admin.subscription_price).toFixed(2)
+                          : "0.00"}
+                      </div>
+                    </td>
+                    <td className="px-4 py-2">
+                      <span
+                        className={`px-2 py-1 rounded-full text-xs font-medium ${getSubscriptionStatusClasses(admin.subscription_status)}`}
+                      >
+                        {admin.subscription_status || "N/A"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2 text-slate-600 text-xs">
+                      {admin.subscription_end_date
+                        ? new Date(
+                            admin.subscription_end_date,
+                          ).toLocaleDateString()
+                        : "—"}
+                    </td>
+                    <td className="px-4 py-2">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            setViewAdmin(admin);
+                            setShowViewModal(true);
+                          }}
+                          className="p-1.5 text-slate-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          title="View Details"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => startEditing(admin)}
+                          className="p-1.5 text-slate-600 hover:text-amber-600 hover:bg-amber-50 rounded transition-colors"
+                          title="Edit"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            setManualPaymentAdmin(admin);
+                            setShowManualPaymentConfirm(true);
+                          }}
+                          className="p-1.5 text-slate-600 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                          title="Record Payment"
+                        >
+                          <CreditCard className="w-3.5 h-3.5" />
+                        </button>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={admin.is_active}
+                            onChange={() =>
+                              toggleAdminAccess(admin.id, !admin.is_active)
+                            }
+                            className="sr-only peer"
+                          />
+                          <div
+                            className={`w-8 h-4 rounded-full transition-colors ${
+                              admin.is_active ? "bg-green-500" : "bg-slate-300"
+                            } peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-300`}
+                          >
+                            <div
+                              className={`absolute top-0.5 left-0.5 bg-white w-3 h-3 rounded-full transition-transform ${
+                                admin.is_active
+                                  ? "translate-x-4"
+                                  : "translate-x-0"
+                              }`}
+                            />
+                          </div>
+                        </label>
+                        <button
+                          onClick={() => confirmDelete(admin)}
+                          className="p-1.5 text-slate-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
+        </div>
+        <div className="flex items-center justify-between gap-3 px-4 py-3 border-t border-slate-200 bg-slate-50/80">
+          <p className="text-xs text-slate-600">
+            Showing page {adminPagination.page} of{" "}
+            {adminPagination.totalPages || 1} ({adminPagination.total} total)
+          </p>
+          {isLoadingAdmins && (
+            <p className="text-xs text-slate-500">Updating...</p>
+          )}
         </div>
       </div>
 

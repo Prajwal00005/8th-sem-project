@@ -36,6 +36,10 @@ class UserSerializer(serializers.ModelSerializer):
         - 'expired'  -> after end/extension
         - 'unpaid'   -> no subscription record
         """
+        annotated_status = getattr(obj, 'subscription_status_annotation', None)
+        if annotated_status:
+            return annotated_status
+
         from .models import AdminSubscriptionPayment
 
         if obj.role != 'admin':
@@ -60,6 +64,10 @@ class UserSerializer(serializers.ModelSerializer):
 
         If extended, return extended_until; otherwise subscription_end_date.
         """
+        annotated_end_date = getattr(obj, 'effective_subscription_end_date', None)
+        if annotated_end_date:
+            return annotated_end_date
+
         from .models import AdminSubscriptionPayment
 
         if obj.role != 'admin':

@@ -38,6 +38,9 @@ from django.core.mail import EmailMessage
 from django.db.models.functions import TruncDay, TruncMonth
 from django.db.models import Count, Sum
 from django.utils.timezone import now
+from django.core.paginator import Paginator, EmptyPage
+from django.db.models.functions import Coalesce
+from django.db.models import Case, When, Value, CharField, DateField, F, OuterRef, Subquery
 from textblob import TextBlob
 from .utils import predict_custom_sentiment
 from rest_framework import permissions
@@ -325,10 +328,134 @@ def get_follow_status(request, user_id):
 @api_view(['GET'])
 @permission_classes([IsSuperAdmin])
 def getAdminList(request):
-    # Get all admins (users with role 'admin')
-    admins = User.objects.filter(role='admin')
-    serializer = UserSerializer(admins, many=True)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    today = timezone.now().date()
+
+    latest_payment_qs = AdminSubscriptionPayment.objects.filter(
+        admin=OuterRef('pk')
+    ).order_by('-subscription_end_date', '-created_at')
+
+    admins_qs = User.objects.filter(role='admin').annotate(
+        latest_subscription_end=Subquery(
+            latest_payment_qs.values('subscription_end_date')[:1],
+            output_field=DateField(),
+        ),
+        latest_extended_until=Subquery(
+            latest_payment_qs.values('extended_until')[:1],
+            output_field=DateField(),
+        ),
+    ).annotate(
+        effective_subscription_end_date=Coalesce('latest_extended_until', 'latest_subscription_end'),
+        subscription_status_annotation=Case(
+            When(latest_subscription_end__isnull=True, then=Value('unpaid')),
+            When(latest_subscription_end__gte=today, then=Value('active')),
+            When(
+                latest_extended_until__isnull=False,
+                latest_subscription_end__lt=today,
+                latest_extended_until__gte=today,
+                then=Value('extended'),
+            ),
+            default=Value('expired'),
+            output_field=CharField(),
+        ),
+    )
+
+    search = (request.query_params.get('search') or '').strip()
+    status_filter = (request.query_params.get('status') or 'all').strip().lower()
+    date_from = (request.query_params.get('date_from') or '').strip()
+    date_to = (request.query_params.get('date_to') or '').strip()
+
+    if search:
+        admins_qs = admins_qs.filter(
+            Q(username__icontains=search)
+            | Q(email__icontains=search)
+            | Q(apartmentName__icontains=search)
+        )
+
+    valid_statuses = {'active', 'extended', 'expired', 'unpaid'}
+    if status_filter in valid_statuses:
+        admins_qs = admins_qs.filter(subscription_status_annotation=status_filter)
+
+    parsed_date_from = None
+    parsed_date_to = None
+    if date_from:
+        try:
+            parsed_date_from = datetime.strptime(date_from, '%Y-%m-%d').date()
+            admins_qs = admins_qs.filter(effective_subscription_end_date__gte=parsed_date_from)
+        except ValueError:
+            return Response({'error': 'Invalid date_from format. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if date_to:
+        try:
+            parsed_date_to = datetime.strptime(date_to, '%Y-%m-%d').date()
+            admins_qs = admins_qs.filter(effective_subscription_end_date__lte=parsed_date_to)
+        except ValueError:
+            return Response({'error': 'Invalid date_to format. Use YYYY-MM-DD.'}, status=status.HTTP_400_BAD_REQUEST)
+
+    admins_qs = admins_qs.order_by('apartmentName', 'id')
+
+    total_admins = admins_qs.count()
+    subscribed_count = admins_qs.filter(
+        subscription_status_annotation__in=['active', 'extended']
+    ).count()
+    unpaid_count = total_admins - subscribed_count
+    total_amount = admins_qs.aggregate(total=Sum('subscription_price'))['total'] or Decimal('0')
+    collected_amount = admins_qs.filter(
+        subscription_status_annotation__in=['active', 'extended']
+    ).aggregate(total=Sum('subscription_price'))['total'] or Decimal('0')
+    outstanding_amount = total_amount - collected_amount
+
+    raw_page_size = request.query_params.get('page_size', '15')
+    raw_page = request.query_params.get('page', '1')
+
+    try:
+        page_size = int(raw_page_size)
+    except (TypeError, ValueError):
+        page_size = 15
+
+    if page_size not in [10, 15, 25, 50]:
+        page_size = 15
+
+    try:
+        page_number = int(raw_page)
+    except (TypeError, ValueError):
+        page_number = 1
+
+    paginator = Paginator(admins_qs, page_size)
+    try:
+        page_obj = paginator.page(page_number)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages if paginator.num_pages > 0 else 1)
+
+    serializer = UserSerializer(page_obj.object_list, many=True)
+
+    return Response(
+        {
+            'results': serializer.data,
+            'pagination': {
+                'page': page_obj.number,
+                'page_size': page_size,
+                'total': total_admins,
+                'total_pages': paginator.num_pages,
+                'has_next': page_obj.has_next(),
+                'has_previous': page_obj.has_previous(),
+            },
+            'filters': {
+                'search': search,
+                'status': status_filter,
+                'date_from': parsed_date_from.isoformat() if parsed_date_from else None,
+                'date_to': parsed_date_to.isoformat() if parsed_date_to else None,
+            },
+            'stats': {
+                'total_admins': total_admins,
+                'subscribed_count': subscribed_count,
+                'unpaid_count': unpaid_count,
+                'total_amount': float(total_amount),
+                'collected_amount': float(collected_amount),
+                'outstanding_amount': float(outstanding_amount),
+            },
+        },
+        status=status.HTTP_200_OK,
+    )
 
 
 @api_view(['GET'])

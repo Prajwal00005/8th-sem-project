@@ -1,84 +1,39 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect } from "react";
 import { useSadminManagementStore } from "../../store/adminManagementStore";
 
-const parseDate = (value) => {
-  if (!value) return null;
-  const d = new Date(value);
-  return isNaN(d.getTime()) ? null : d;
-};
-
-const formatMonthLabel = (date) => {
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    year: "numeric",
-  });
-};
+const PAGE_SIZE_OPTIONS = [10, 15, 25, 50];
 
 const SuperadminReports = () => {
-  const { admins, fetchAdmins } = useSadminManagementStore();
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all");
+  const {
+    reportAdmins,
+    reportStats,
+    reportPagination,
+    reportFilters,
+    isLoadingReports,
+    fetchReportAdmins,
+    setReportFilters,
+    setReportPage,
+    setReportPageSize,
+  } = useSadminManagementStore();
 
   useEffect(() => {
-    fetchAdmins();
-  }, [fetchAdmins]);
-
-  const filteredAdmins = useMemo(() => {
-    const from = dateFrom ? parseDate(dateFrom) : null;
-    const to = dateTo ? parseDate(dateTo) : null;
-
-    return admins.filter((admin) => {
-      const status = admin.subscription_status || "unpaid";
-      if (statusFilter !== "all" && status !== statusFilter) return false;
-
-      const endDate = parseDate(admin.subscription_end_date);
-      if (from && (!endDate || endDate < from)) return false;
-      if (to && (!endDate || endDate > to)) return false;
-
-      return true;
+    fetchReportAdmins({
+      page: reportPagination.page,
+      pageSize: reportPagination.pageSize,
+      status: reportFilters.status,
+      dateFrom: reportFilters.dateFrom,
+      dateTo: reportFilters.dateTo,
     });
-  }, [admins, dateFrom, dateTo, statusFilter]);
+  }, [
+    fetchReportAdmins,
+    reportPagination.page,
+    reportPagination.pageSize,
+    reportFilters.status,
+    reportFilters.dateFrom,
+    reportFilters.dateTo,
+  ]);
 
-  const paidAdmins = useMemo(
-    () =>
-      filteredAdmins.filter((admin) => {
-        const status = admin.subscription_status || "unpaid";
-        return status === "active" || status === "extended";
-      }),
-    [filteredAdmins],
-  );
-
-  const stats = useMemo(() => {
-    const totalAdmins = admins.length;
-    let subscribedCount = 0;
-    let unpaidCount = 0;
-    let totalAmount = 0;
-    let collectedAmount = 0;
-    let outstandingAmount = 0;
-
-    admins.forEach((admin) => {
-      const price = Number(admin.subscription_price) || 0;
-      totalAmount += price;
-      const status = admin.subscription_status || "unpaid";
-      if (status === "active" || status === "extended") {
-        subscribedCount += 1;
-        collectedAmount += price;
-      } else {
-        unpaidCount += 1;
-        outstandingAmount += price;
-      }
-    });
-
-    return {
-      totalAdmins,
-      subscribedCount,
-      unpaidCount,
-      totalAmount,
-      collectedAmount,
-      outstandingAmount,
-    };
-  }, [admins]);
+  const stats = reportStats;
 
   const getStatusClasses = (status) => {
     switch (status) {
@@ -95,50 +50,59 @@ const SuperadminReports = () => {
   };
 
   return (
-    <div className="space-y-8 p-6 lg:p-8">
+    <div className="space-y-5 p-4 lg:p-6">
       {/* Header Section */}
-      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+      <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
+          <h1 className="text-2xl font-semibold bg-gradient-to-r from-slate-800 to-slate-600 bg-clip-text text-transparent">
             Subscription Reports
           </h1>
-          <p className="text-slate-500 mt-1">
+          <p className="text-slate-500 mt-1 text-sm">
             Overview of apartment subscriptions, payments, and outstanding
             amounts
           </p>
         </div>
-        <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-slate-200 p-3">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-600">
+              <label className="text-[11px] font-medium text-slate-600">
                 From date
               </label>
               <input
                 type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+                value={reportFilters.dateFrom}
+                onChange={(e) => {
+                  setReportFilters({ dateFrom: e.target.value });
+                  setReportPage(1);
+                }}
+                className="border border-slate-200 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-600">
+              <label className="text-[11px] font-medium text-slate-600">
                 To date
               </label>
               <input
                 type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+                value={reportFilters.dateTo}
+                onChange={(e) => {
+                  setReportFilters({ dateTo: e.target.value });
+                  setReportPage(1);
+                }}
+                className="border border-slate-200 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-xs font-medium text-slate-600">
+              <label className="text-[11px] font-medium text-slate-600">
                 Status
               </label>
               <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+                value={reportFilters.status}
+                onChange={(e) => {
+                  setReportFilters({ status: e.target.value });
+                  setReportPage(1);
+                }}
+                className="border border-slate-200 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
               >
                 <option value="all">All</option>
                 <option value="active">Active</option>
@@ -147,17 +111,33 @@ const SuperadminReports = () => {
                 <option value="unpaid">Unpaid</option>
               </select>
             </div>
+            <div className="flex flex-col gap-1">
+              <label className="text-[11px] font-medium text-slate-600">
+                Page size
+              </label>
+              <select
+                value={reportPagination.pageSize}
+                onChange={(e) => setReportPageSize(Number(e.target.value))}
+                className="border border-slate-200 rounded-md px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500/20 bg-white"
+              >
+                {PAGE_SIZE_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-6 hover:shadow-xl transition-all duration-300">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-slate-200 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
               <svg
-                className="w-6 h-6 text-white"
+                className="w-4 h-4 text-white"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -170,23 +150,23 @@ const SuperadminReports = () => {
                 />
               </svg>
             </div>
-            <span className="text-2xl font-bold text-slate-800">
+            <span className="text-xl font-semibold text-slate-800">
               {stats.totalAdmins}
             </span>
           </div>
-          <h3 className="text-lg font-semibold text-slate-800">
+          <h3 className="text-sm font-semibold text-slate-800">
             Total Apartments
           </h3>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-xs text-slate-500 mt-1">
             All registered properties
           </p>
         </div>
 
-        <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-6 hover:shadow-xl transition-all duration-300">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl flex items-center justify-center">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-slate-200 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-9 h-9 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center">
               <svg
-                className="w-6 h-6 text-white"
+                className="w-4 h-4 text-white"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -199,19 +179,19 @@ const SuperadminReports = () => {
                 />
               </svg>
             </div>
-            <span className="text-2xl font-bold text-slate-800">
+            <span className="text-xl font-semibold text-slate-800">
               {stats.subscribedCount}
             </span>
           </div>
-          <h3 className="text-lg font-semibold text-slate-800">Subscribed</h3>
-          <p className="text-sm text-slate-500 mt-1">Active subscriptions</p>
+          <h3 className="text-sm font-semibold text-slate-800">Subscribed</h3>
+          <p className="text-xs text-slate-500 mt-1">Active subscriptions</p>
         </div>
 
-        <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-6 hover:shadow-xl transition-all duration-300">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-red-500 to-pink-600 rounded-xl flex items-center justify-center">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-slate-200 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-9 h-9 bg-gradient-to-br from-red-500 to-pink-600 rounded-lg flex items-center justify-center">
               <svg
-                className="w-6 h-6 text-white"
+                className="w-4 h-4 text-white"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -224,19 +204,19 @@ const SuperadminReports = () => {
                 />
               </svg>
             </div>
-            <span className="text-2xl font-bold text-slate-800">
+            <span className="text-xl font-semibold text-slate-800">
               ₹{stats.outstandingAmount.toLocaleString("en-IN")}
             </span>
           </div>
-          <h3 className="text-lg font-semibold text-slate-800">Outstanding</h3>
-          <p className="text-sm text-slate-500 mt-1">Pending payments</p>
+          <h3 className="text-sm font-semibold text-slate-800">Outstanding</h3>
+          <p className="text-xs text-slate-500 mt-1">Pending payments</p>
         </div>
 
-        <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 p-6 hover:shadow-xl transition-all duration-300">
-          <div className="flex items-center justify-between mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-xl flex items-center justify-center">
+        <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-slate-200 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="w-9 h-9 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-lg flex items-center justify-center">
               <svg
-                className="w-6 h-6 text-white"
+                className="w-4 h-4 text-white"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"
@@ -249,30 +229,31 @@ const SuperadminReports = () => {
                 />
               </svg>
             </div>
-            <span className="text-2xl font-bold text-slate-800">
+            <span className="text-xl font-semibold text-slate-800">
               ₹{stats.collectedAmount.toLocaleString("en-IN")}
             </span>
           </div>
-          <h3 className="text-lg font-semibold text-slate-800">Collected</h3>
-          <p className="text-sm text-slate-500 mt-1">Total revenue</p>
+          <h3 className="text-sm font-semibold text-slate-800">Collected</h3>
+          <p className="text-xs text-slate-500 mt-1">Total revenue</p>
         </div>
       </div>
 
-      {/* Paid Subscriptions Table */}
-      <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/50 overflow-hidden">
-        <div className="bg-slate-50 border-b border-slate-200 p-6">
+      {/* Subscription Table */}
+      <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="bg-slate-50 border-b border-slate-200 p-4">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
             <div>
-              <h3 className="text-xl font-semibold text-slate-800">
-                Paid Subscriptions
+              <h3 className="text-base font-semibold text-slate-800">
+                Subscription Records
               </h3>
-              <p className="text-sm text-slate-500">
-                Detailed list of apartments with active or extended
-                subscriptions
+              <p className="text-xs text-slate-500">
+                Paginated records based on selected backend filters
               </p>
             </div>
-            <p className="text-sm text-slate-500">
-              Showing {paidAdmins.length} paid of {admins.length} apartments
+            <p className="text-xs text-slate-500">
+              Showing page {reportPagination.page} of{" "}
+              {reportPagination.totalPages || 1} ({reportPagination.total}{" "}
+              records)
             </p>
           </div>
         </div>
@@ -280,76 +261,71 @@ const SuperadminReports = () => {
           <table className="w-full">
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">
                   Apartment
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">
                   Admin
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">
                   Status
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">
                   Price
                 </th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-slate-700">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700">
                   Valid Till
                 </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {paidAdmins.length === 0 ? (
+              {isLoadingReports ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-16 text-center">
-                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <svg
-                        className="w-8 h-8 text-slate-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293H6"
-                        />
-                      </svg>
-                    </div>
-                    <p className="text-slate-500">
-                      No paid subscriptions found for the selected filters.
-                    </p>
+                  <td
+                    colSpan={5}
+                    className="px-4 py-10 text-center text-sm text-slate-500"
+                  >
+                    Loading report data...
+                  </td>
+                </tr>
+              ) : reportAdmins.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={5}
+                    className="px-4 py-10 text-center text-sm text-slate-500"
+                  >
+                    No subscriptions found for the selected filters.
                   </td>
                 </tr>
               ) : (
-                paidAdmins.map((admin) => (
+                reportAdmins.map((admin) => (
                   <tr
                     key={admin.id}
                     className="hover:bg-slate-50 transition-colors"
                   >
-                    <td className="px-6 py-4">
-                      <div className="font-medium text-slate-800">
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-slate-800 text-sm">
                         {admin.apartmentName}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-slate-600">
+                    <td className="px-4 py-3 text-slate-600 text-sm">
                       {admin.username}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       {admin.subscription_status ? (
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusClasses(admin.subscription_status)}`}
+                          className={`px-2 py-1 rounded-full text-[11px] font-medium ${getStatusClasses(admin.subscription_status)}`}
                         >
                           {admin.subscription_status}
                         </span>
                       ) : (
-                        <span className="px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600">
+                        <span className="px-2 py-1 rounded-full text-[11px] font-medium bg-slate-100 text-slate-600">
                           Unpaid
                         </span>
                       )}
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="font-semibold text-slate-800">
+                    <td className="px-4 py-3">
+                      <div className="font-semibold text-slate-800 text-sm">
                         ₹
                         {admin.subscription_price
                           ? Number(admin.subscription_price).toLocaleString(
@@ -362,11 +338,11 @@ const SuperadminReports = () => {
                           : "0.00"}
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-slate-600 text-sm">
+                    <td className="px-4 py-3 text-slate-600 text-xs">
                       {admin.subscription_end_date
-                        ? parseDate(
+                        ? new Date(
                             admin.subscription_end_date,
-                          )?.toLocaleDateString()
+                          ).toLocaleDateString()
                         : "—"}
                     </td>
                   </tr>
@@ -374,6 +350,24 @@ const SuperadminReports = () => {
               )}
             </tbody>
           </table>
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-2 px-4 py-3 border-t border-slate-200 bg-slate-50">
+          <button
+            type="button"
+            className="px-3 py-1.5 text-xs rounded-md border border-slate-300 text-slate-700 disabled:opacity-40"
+            disabled={!reportPagination.hasPrevious || isLoadingReports}
+            onClick={() => setReportPage(reportPagination.page - 1)}
+          >
+            Previous
+          </button>
+          <button
+            type="button"
+            className="px-3 py-1.5 text-xs rounded-md border border-slate-300 text-slate-700 disabled:opacity-40"
+            disabled={!reportPagination.hasNext || isLoadingReports}
+            onClick={() => setReportPage(reportPagination.page + 1)}
+          >
+            Next
+          </button>
         </div>
       </div>
     </div>

@@ -1,8 +1,15 @@
 import { create } from "zustand";
 import api from "../utils/axiosConfig";
+import {
+  buildQueryParams,
+  normalizePaginatedResponse,
+} from "../utils/pagination";
 
 export const useResidentBillStore = create((set, get) => ({
   bills: [],
+  billsPagination: null,
+  billsStats: null,
+  lastBillsQuery: { page: 1, page_size: 10 },
   selectedBill: null,
   loading: false,
   error: "",
@@ -10,11 +17,25 @@ export const useResidentBillStore = create((set, get) => ({
   clientSecret: "",
   payingBill: null,
 
-  fetchBills: async () => {
+  fetchBills: async (params = {}) => {
     set({ loading: true, error: "" });
     try {
-      const res = await api.get("/api/v1/bills/resident/");
-      set({ bills: res.data, loading: false });
+      const query = {
+        ...get().lastBillsQuery,
+        ...params,
+        paginated: true,
+      };
+      const res = await api.get(
+        `/api/v1/bills/resident/${buildQueryParams(query)}`,
+      );
+      const normalized = normalizePaginatedResponse(res.data);
+      set({
+        bills: normalized.results,
+        billsPagination: normalized.pagination,
+        billsStats: normalized.stats,
+        lastBillsQuery: query,
+        loading: false,
+      });
     } catch (err) {
       console.error("Failed to fetch bills", err);
       set({ error: "Failed to fetch bills", loading: false });
@@ -69,7 +90,7 @@ export const useResidentBillStore = create((set, get) => ({
         payment_intent_id: paymentIntentId,
       });
 
-      await get().fetchBills();
+      await get().fetchBills(get().lastBillsQuery);
 
       set({
         loading: false,

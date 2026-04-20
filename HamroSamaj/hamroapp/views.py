@@ -742,19 +742,101 @@ def visitorHistory(request):
     """
     start_date = request.query_params.get('start_date')
     end_date = request.query_params.get('end_date')
-    status = request.query_params.get('status')
+    status_filter = request.query_params.get('status')
+    search = request.query_params.get('search')
     
-    visitors = Visitor.objects.filter(resident__apartmentName=request.user.apartmentName)
+    visitors = (
+        Visitor.objects.filter(resident__apartmentName=request.user.apartmentName)
+        .select_related('resident')
+        .order_by('-date', '-created_at')
+    )
     
     if start_date:
         visitors = visitors.filter(date__gte=start_date)
     if end_date:
         visitors = visitors.filter(date__lte=end_date)
-    if status:
-        visitors = visitors.filter(status=status)
+    if status_filter:
+        visitors = visitors.filter(status=status_filter)
+
+    if search:
+        visitors = visitors.filter(
+            Q(name__icontains=search)
+            | Q(phone_number__icontains=search)
+            | Q(unit__icontains=search)
+        )
+
+    want_paginated = any(
+        key in request.query_params
+        for key in ['page', 'page_size', 'paginated']
+    )
+    if not want_paginated:
+        serializer = VisitorSerializer(visitors, many=True)
+        return Response(serializer.data)
+
+    allowed_page_sizes = {10, 15, 25, 50}
+    try:
+        page = int(request.query_params.get('page') or 1)
+    except (TypeError, ValueError):
+        page = 1
+    page = max(1, page)
+
+    try:
+        page_size = int(request.query_params.get('page_size') or 10)
+    except (TypeError, ValueError):
+        page_size = 10
+    if page_size not in allowed_page_sizes:
+        page_size = 10
+
+    paginator = Paginator(visitors, page_size)
+    if paginator.count == 0:
+        return Response(
+            {
+                'results': [],
+                'pagination': {
+                    'page': 1,
+                    'page_size': page_size,
+                    'total': 0,
+                    'total_pages': 0,
+                    'has_next': False,
+                    'has_previous': False,
+                },
+                'filters': {
+                    'start_date': start_date or '',
+                    'end_date': end_date or '',
+                    'status': status_filter or '',
+                    'search': search or '',
+                },
+            },
+            status=status.HTTP_200_OK,
+        )
+    try:
+        page_obj = paginator.page(page)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    serializer = VisitorSerializer(page_obj.object_list, many=True)
+    return Response(
+        {
+            'results': serializer.data,
+            'pagination': {
+                'page': page_obj.number,
+                'page_size': page_size,
+                'total': paginator.count,
+                'total_pages': paginator.num_pages,
+                'has_next': page_obj.has_next(),
+                'has_previous': page_obj.has_previous(),
+            },
+            'filters': {
+                'start_date': start_date or '',
+                'end_date': end_date or '',
+                'status': status_filter or '',
+                'search': search or '',
+            },
+        },
+        status=status.HTTP_200_OK,
+    )
     
-    serializer = VisitorSerializer(visitors, many=True)
-    return Response(serializer.data)
+    
 
 
 # --------- Room helper for security/admin (for bill autosuggest) ---------
@@ -1033,9 +1115,117 @@ def securityBills(request):
         return Response({'error': 'Security is not linked to an admin.'}, status=status.HTTP_400_BAD_REQUEST)
 
     if request.method == 'GET':
-        bills = Bill.objects.filter(room__apartment=admin).select_related('room', 'resident', 'security')
-        serializer = BillSerializer(bills, many=True)
-        return Response(serializer.data)
+        bills = (
+            Bill.objects.filter(room__apartment=admin)
+            .select_related('room', 'resident', 'security')
+            .order_by('-date', '-created_at')
+        )
+
+        status_filter = request.query_params.get('status')
+        if status_filter in ['paid', 'unpaid']:
+            bills = bills.filter(payment_status=status_filter)
+
+        date_from = request.query_params.get('date_from')
+        if date_from:
+            try:
+                bills = bills.filter(date__gte=datetime.strptime(date_from, '%Y-%m-%d').date())
+            except (TypeError, ValueError):
+                pass
+
+        date_to = request.query_params.get('date_to')
+        if date_to:
+            try:
+                bills = bills.filter(date__lte=datetime.strptime(date_to, '%Y-%m-%d').date())
+            except (TypeError, ValueError):
+                pass
+
+        search_room = request.query_params.get('search_room')
+        if search_room:
+            bills = bills.filter(room__room_number__icontains=search_room)
+
+        search_name = request.query_params.get('search_name')
+        if search_name:
+            bills = bills.filter(resident__username__icontains=search_name)
+
+        search = request.query_params.get('search')
+        if search:
+            bills = bills.filter(
+                Q(room__room_number__icontains=search)
+                | Q(resident__username__icontains=search)
+            )
+
+        want_paginated = any(
+            key in request.query_params
+            for key in ['page', 'page_size', 'paginated']
+        )
+        if not want_paginated:
+            serializer = BillSerializer(bills, many=True)
+            return Response(serializer.data)
+
+        allowed_page_sizes = {10, 15, 25, 50}
+        try:
+            page = int(request.query_params.get('page') or 1)
+        except (TypeError, ValueError):
+            page = 1
+        page = max(1, page)
+
+        try:
+            page_size = int(request.query_params.get('page_size') or 10)
+        except (TypeError, ValueError):
+            page_size = 10
+        if page_size not in allowed_page_sizes:
+            page_size = 10
+
+        paginator = Paginator(bills, page_size)
+        if paginator.count == 0:
+            return Response(
+                {
+                    'results': [],
+                    'pagination': {
+                        'page': 1,
+                        'page_size': page_size,
+                        'total': 0,
+                        'total_pages': 0,
+                        'has_next': False,
+                        'has_previous': False,
+                    },
+                    'filters': {
+                        'status': status_filter or 'all',
+                        'date_from': date_from or '',
+                        'date_to': date_to or '',
+                        'search_room': search_room or '',
+                        'search_name': search_name or '',
+                        'search': search or '',
+                    },
+                }
+            )
+        try:
+            page_obj = paginator.page(page)
+        except EmptyPage:
+            page_obj = paginator.page(paginator.num_pages)
+
+        serializer = BillSerializer(page_obj.object_list, many=True)
+        return Response(
+            {
+                'results': serializer.data,
+                'pagination': {
+                    'page': page_obj.number,
+                    'page_size': page_size,
+                    'total': paginator.count,
+                    'total_pages': paginator.num_pages,
+                    'has_next': page_obj.has_next(),
+                    'has_previous': page_obj.has_previous(),
+                },
+                'filters': {
+                    'status': status_filter or 'all',
+                    'date_from': date_from or '',
+                    'date_to': date_to or '',
+                    'search_room': search_room or '',
+                    'search_name': search_name or '',
+                    'search': search or '',
+                },
+            }
+        )
 
     # POST - create bill
     room_id = request.data.get('room')
@@ -1126,9 +1316,96 @@ def securityAggregateBills(request):
     if request.method == 'GET':
         from .models import SecurityAggregateBill
 
-        bills = SecurityAggregateBill.objects.filter(admin=admin, security=user)
-        serializer = SecurityAggregateBillSerializer(bills, many=True)
-        return Response(serializer.data)
+        bills = (
+            SecurityAggregateBill.objects.filter(admin=admin, security=user)
+            .select_related('admin', 'security')
+            .order_by('-date', '-created_at')
+        )
+
+        status_filter = request.query_params.get('status')
+        if status_filter in ['paid', 'unpaid']:
+            bills = bills.filter(payment_status=status_filter)
+
+        date_from = request.query_params.get('date_from')
+        if date_from:
+            try:
+                bills = bills.filter(date__gte=datetime.strptime(date_from, '%Y-%m-%d').date())
+            except (TypeError, ValueError):
+                pass
+
+        date_to = request.query_params.get('date_to')
+        if date_to:
+            try:
+                bills = bills.filter(date__lte=datetime.strptime(date_to, '%Y-%m-%d').date())
+            except (TypeError, ValueError):
+                pass
+
+        want_paginated = any(
+            key in request.query_params
+            for key in ['page', 'page_size', 'paginated']
+        )
+        if not want_paginated:
+            serializer = SecurityAggregateBillSerializer(bills, many=True)
+            return Response(serializer.data)
+
+        allowed_page_sizes = {10, 15, 25, 50}
+        try:
+            page = int(request.query_params.get('page') or 1)
+        except (TypeError, ValueError):
+            page = 1
+        page = max(1, page)
+
+        try:
+            page_size = int(request.query_params.get('page_size') or 10)
+        except (TypeError, ValueError):
+            page_size = 10
+        if page_size not in allowed_page_sizes:
+            page_size = 10
+
+        paginator = Paginator(bills, page_size)
+        if paginator.count == 0:
+            return Response(
+                {
+                    'results': [],
+                    'pagination': {
+                        'page': 1,
+                        'page_size': page_size,
+                        'total': 0,
+                        'total_pages': 0,
+                        'has_next': False,
+                        'has_previous': False,
+                    },
+                    'filters': {
+                        'status': status_filter or 'all',
+                        'date_from': date_from or '',
+                        'date_to': date_to or '',
+                    },
+                }
+            )
+        try:
+            page_obj = paginator.page(page)
+        except EmptyPage:
+            page_obj = paginator.page(paginator.num_pages)
+
+        serializer = SecurityAggregateBillSerializer(page_obj.object_list, many=True)
+        return Response(
+            {
+                'results': serializer.data,
+                'pagination': {
+                    'page': page_obj.number,
+                    'page_size': page_size,
+                    'total': paginator.count,
+                    'total_pages': paginator.num_pages,
+                    'has_next': page_obj.has_next(),
+                    'has_previous': page_obj.has_previous(),
+                },
+                'filters': {
+                    'status': status_filter or 'all',
+                    'date_from': date_from or '',
+                    'date_to': date_to or '',
+                },
+            }
+        )
 
     # POST - create aggregate bill
     from .models import SecurityAggregateBill
@@ -1196,9 +1473,115 @@ def residentBills(request):
     if request.user.role != 'resident':
         return Response({'error': 'Only residents can view their bills.'}, status=status.HTTP_403_FORBIDDEN)
 
-    bills = Bill.objects.filter(resident=request.user).select_related('room', 'security')
-    serializer = BillSerializer(bills, many=True)
-    return Response(serializer.data)
+    base_qs = Bill.objects.filter(resident=request.user)
+    bills = (
+        base_qs
+        .select_related('room', 'security')
+        .order_by('-date', '-created_at')
+    )
+
+    status_filter = request.query_params.get('status')
+    if status_filter in ['paid', 'unpaid']:
+        bills = bills.filter(payment_status=status_filter)
+
+    date_from = request.query_params.get('date_from')
+    if date_from:
+        try:
+            bills = bills.filter(date__gte=datetime.strptime(date_from, '%Y-%m-%d').date())
+        except (TypeError, ValueError):
+            pass
+
+    date_to = request.query_params.get('date_to')
+    if date_to:
+        try:
+            bills = bills.filter(date__lte=datetime.strptime(date_to, '%Y-%m-%d').date())
+        except (TypeError, ValueError):
+            pass
+
+    search = request.query_params.get('search')
+    if search:
+        bills = bills.filter(Q(room__room_number__icontains=search))
+
+    want_paginated = any(
+        key in request.query_params
+        for key in ['page', 'page_size', 'paginated']
+    )
+    if not want_paginated:
+        serializer = BillSerializer(bills, many=True)
+        return Response(serializer.data)
+
+    allowed_page_sizes = {10, 15, 25, 50}
+    try:
+        page = int(request.query_params.get('page') or 1)
+    except (TypeError, ValueError):
+        page = 1
+    page = max(1, page)
+
+    try:
+        page_size = int(request.query_params.get('page_size') or 10)
+    except (TypeError, ValueError):
+        page_size = 10
+    if page_size not in allowed_page_sizes:
+        page_size = 10
+
+    paginator = Paginator(bills, page_size)
+    if paginator.count == 0:
+        return Response(
+            {
+                'results': [],
+                'pagination': {
+                    'page': 1,
+                    'page_size': page_size,
+                    'total': 0,
+                    'total_pages': 0,
+                    'has_next': False,
+                    'has_previous': False,
+                },
+                'stats': {
+                    'total': base_qs.count(),
+                    'paid': base_qs.filter(payment_status='paid').count(),
+                    'unpaid': base_qs.filter(payment_status='unpaid').count(),
+                },
+                'filters': {
+                    'status': status_filter or 'all',
+                    'date_from': date_from or '',
+                    'date_to': date_to or '',
+                    'search': search or '',
+                },
+            },
+            status=status.HTTP_200_OK,
+        )
+    try:
+        page_obj = paginator.page(page)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    serializer = BillSerializer(page_obj.object_list, many=True)
+    return Response(
+        {
+            'results': serializer.data,
+            'pagination': {
+                'page': page_obj.number,
+                'page_size': page_size,
+                'total': paginator.count,
+                'total_pages': paginator.num_pages,
+                'has_next': page_obj.has_next(),
+                'has_previous': page_obj.has_previous(),
+            },
+            'stats': {
+                'total': base_qs.count(),
+                'paid': base_qs.filter(payment_status='paid').count(),
+                'unpaid': base_qs.filter(payment_status='unpaid').count(),
+            },
+            'filters': {
+                'status': status_filter or 'all',
+                'date_from': date_from or '',
+                'date_to': date_to or '',
+                'search': search or '',
+            },
+        },
+        status=status.HTTP_200_OK,
+    )
 
 
 @api_view(['GET'])
@@ -1235,22 +1618,127 @@ def adminAggregateBills(request):
 
     from .models import SecurityAggregateBill
 
-    aggregate_qs = SecurityAggregateBill.objects.filter(admin=user).select_related('security').order_by('-created_at')
+    aggregate_qs = (
+        SecurityAggregateBill.objects.filter(admin=user)
+        .select_related('security')
+        .order_by('-date', '-created_at')
+    )
 
-    data = []
-    for agg in aggregate_qs:
-        # Shared amount: sum of all resident bills for this admin on the same date that are paid
-        shared_total = Bill.objects.filter(
-            room__apartment=user,
-            date=agg.date,
-            payment_status='paid',
-        ).aggregate(total=Sum('total_amount'))['total'] or 0
+    status_filter = request.query_params.get('status')
+    if status_filter in ['paid', 'unpaid']:
+        aggregate_qs = aggregate_qs.filter(payment_status=status_filter)
 
-        serialized = SecurityAggregateBillSerializer(agg).data
-        serialized['shared_amount'] = float(shared_total)
-        data.append(serialized)
+    date_from = request.query_params.get('date_from')
+    if date_from:
+        try:
+            aggregate_qs = aggregate_qs.filter(date__gte=datetime.strptime(date_from, '%Y-%m-%d').date())
+        except (TypeError, ValueError):
+            pass
 
-    return Response(data, status=status.HTTP_200_OK)
+    date_to = request.query_params.get('date_to')
+    if date_to:
+        try:
+            aggregate_qs = aggregate_qs.filter(date__lte=datetime.strptime(date_to, '%Y-%m-%d').date())
+        except (TypeError, ValueError):
+            pass
+
+    search = request.query_params.get('search')
+    if search:
+        aggregate_qs = aggregate_qs.filter(security__username__icontains=search)
+
+    want_paginated = any(
+        key in request.query_params
+        for key in ['page', 'page_size', 'paginated']
+    )
+
+    def serialize_with_shared_amount(aggregate_bills):
+        dates = [b.date for b in aggregate_bills]
+        shared_map = {}
+        if dates:
+            rows = (
+                Bill.objects.filter(
+                    room__apartment=user,
+                    date__in=dates,
+                    payment_status='paid',
+                )
+                .values('date')
+                .annotate(total=Sum('total_amount'))
+            )
+            shared_map = {r['date']: float(r['total'] or 0) for r in rows}
+
+        data = []
+        for agg in aggregate_bills:
+            serialized = SecurityAggregateBillSerializer(agg).data
+            serialized['shared_amount'] = shared_map.get(agg.date, 0.0)
+            data.append(serialized)
+        return data
+
+    if not want_paginated:
+        bills = list(aggregate_qs)
+        return Response(serialize_with_shared_amount(bills), status=status.HTTP_200_OK)
+
+    allowed_page_sizes = {10, 15, 25, 50}
+    try:
+        page = int(request.query_params.get('page') or 1)
+    except (TypeError, ValueError):
+        page = 1
+    page = max(1, page)
+
+    try:
+        page_size = int(request.query_params.get('page_size') or 10)
+    except (TypeError, ValueError):
+        page_size = 10
+    if page_size not in allowed_page_sizes:
+        page_size = 10
+
+    paginator = Paginator(aggregate_qs, page_size)
+    if paginator.count == 0:
+        return Response(
+            {
+                'results': [],
+                'pagination': {
+                    'page': 1,
+                    'page_size': page_size,
+                    'total': 0,
+                    'total_pages': 0,
+                    'has_next': False,
+                    'has_previous': False,
+                },
+                'filters': {
+                    'status': status_filter or 'all',
+                    'date_from': date_from or '',
+                    'date_to': date_to or '',
+                    'search': search or '',
+                },
+            },
+            status=status.HTTP_200_OK,
+        )
+    try:
+        page_obj = paginator.page(page)
+    except EmptyPage:
+        page_obj = paginator.page(paginator.num_pages)
+
+    results = serialize_with_shared_amount(list(page_obj.object_list))
+    return Response(
+        {
+            'results': results,
+            'pagination': {
+                'page': page_obj.number,
+                'page_size': page_size,
+                'total': paginator.count,
+                'total_pages': paginator.num_pages,
+                'has_next': page_obj.has_next(),
+                'has_previous': page_obj.has_previous(),
+            },
+            'filters': {
+                'status': status_filter or 'all',
+                'date_from': date_from or '',
+                'date_to': date_to or '',
+                'search': search or '',
+            },
+        },
+        status=status.HTTP_200_OK,
+    )
 
 
 @api_view(['PATCH'])

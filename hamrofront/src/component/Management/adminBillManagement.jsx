@@ -1,18 +1,24 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useAdminBillStore } from "../../store/adminBillStore";
 
 const AdminBillManagement = () => {
   const {
     aggregateBills,
+    aggregatePagination,
     loading,
     error,
     fetchAggregateBills,
     updateAggregateBillStatus,
   } = useAdminBillStore();
 
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   useEffect(() => {
-    fetchAggregateBills();
-  }, [fetchAggregateBills]);
+    fetchAggregateBills({ page, page_size: pageSize });
+  }, [fetchAggregateBills, page, pageSize]);
+
+  const totalRecords = aggregatePagination?.total ?? aggregateBills.length;
 
   const formatDate = (value) => {
     if (!value) return "-";
@@ -48,8 +54,7 @@ const AdminBillManagement = () => {
               Security Aggregate Bills
             </h3>
             <p className="text-xs text-slate-500 mt-1">
-              {aggregateBills.length} record
-              {aggregateBills.length !== 1 ? "s" : ""} found
+              {totalRecords} record{totalRecords !== 1 ? "s" : ""} found
             </p>
           </div>
         </div>
@@ -78,73 +83,115 @@ const AdminBillManagement = () => {
             <p className="text-slate-500 text-sm">No aggregate bills found</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gradient-to-r from-slate-50 to-gray-50 border-b border-white/50">
-                  <th className="px-6 py-3 text-left font-medium text-slate-700 text-sm">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-left font-medium text-slate-700 text-sm">
-                    Security
-                  </th>
-                  <th className="px-6 py-3 text-left font-medium text-slate-700 text-sm">
-                    Total Bill Amount
-                  </th>
-                  <th className="px-6 py-3 text-left font-medium text-slate-700 text-sm">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left font-medium text-slate-700 text-sm">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
-                {aggregateBills.map((bill) => {
-                  const isPaid = bill.payment_status === "paid";
-                  return (
-                    <tr key={bill.id}>
-                      <td className="px-6 py-3 text-sm text-slate-800">
-                        {formatDate(bill.date)}
-                      </td>
-                      <td className="px-6 py-3 text-sm text-slate-800">
-                        {bill.security_name}
-                      </td>
-                      <td className="px-6 py-3 text-sm text-slate-800">
-                        ₹{parseFloat(bill.total_amount).toFixed(2)}
-                      </td>
-                      <td className="px-6 py-3 text-sm">
-                        <span
-                          className={`px-2 py-1 rounded-full text-xs font-semibold ${isPaid ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
-                        >
-                          {isPaid ? "Paid" : "Unpaid"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-3 text-sm">
-                        <button
-                          type="button"
-                          onClick={() =>
-                            updateAggregateBillStatus(
-                              bill.id,
-                              isPaid ? "unpaid" : "paid",
-                            )
-                          }
-                          className={`px-3 py-1 rounded-md text-xs font-medium border cursor-pointer transition-colors ${
-                            isPaid
-                              ? "bg-green-50 text-green-700 border-green-100 hover:bg-green-100"
-                              : "bg-red-50 text-red-700 border-red-100 hover:bg-red-100"
-                          }`}
-                          disabled={loading}
-                        >
-                          {isPaid ? "Mark Unpaid" : "Mark Paid"}
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+          <>
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gradient-to-r from-slate-50 to-gray-50 border-b border-white/50">
+                    <th className="px-6 py-3 text-left font-medium text-slate-700 text-sm">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-left font-medium text-slate-700 text-sm">
+                      Security
+                    </th>
+                    <th className="px-6 py-3 text-left font-medium text-slate-700 text-sm">
+                      Total Bill Amount
+                    </th>
+                    <th className="px-6 py-3 text-left font-medium text-slate-700 text-sm">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-left font-medium text-slate-700 text-sm">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 bg-white">
+                  {aggregateBills.map((bill) => {
+                    const isPaid = bill.payment_status === "paid";
+                    return (
+                      <tr key={bill.id}>
+                        <td className="px-6 py-3 text-sm text-slate-800">
+                          {formatDate(bill.date)}
+                        </td>
+                        <td className="px-6 py-3 text-sm text-slate-800">
+                          {bill.security_name}
+                        </td>
+                        <td className="px-6 py-3 text-sm text-slate-800">
+                          ₹{parseFloat(bill.total_amount).toFixed(2)}
+                        </td>
+                        <td className="px-6 py-3 text-sm">
+                          <span
+                            className={`px-2 py-1 rounded-full text-xs font-semibold ${isPaid ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}
+                          >
+                            {isPaid ? "Paid" : "Unpaid"}
+                          </span>
+                        </td>
+                        <td className="px-6 py-3 text-sm">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateAggregateBillStatus(
+                                bill.id,
+                                isPaid ? "unpaid" : "paid",
+                              )
+                            }
+                            className={`px-3 py-1 rounded-md text-xs font-medium border cursor-pointer transition-colors ${
+                              isPaid
+                                ? "bg-green-50 text-green-700 border-green-100 hover:bg-green-100"
+                                : "bg-red-50 text-red-700 border-red-100 hover:bg-red-100"
+                            }`}
+                            disabled={loading}
+                          >
+                            {isPaid ? "Mark Unpaid" : "Mark Paid"}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {aggregatePagination && (
+              <div className="flex items-center justify-end gap-2 px-6 py-3 border-t border-white/50 bg-gradient-to-r from-slate-50 to-gray-50">
+                <label className="text-sm text-slate-600">Page size</label>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(parseInt(e.target.value, 10));
+                    setPage(1);
+                  }}
+                  className="bg-white border border-slate-200 text-slate-800 px-2 py-1 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value={10}>10</option>
+                  <option value={15}>15</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                </select>
+
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={!aggregatePagination.has_previous || loading}
+                  className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm disabled:opacity-50"
+                >
+                  Prev
+                </button>
+                <span className="text-sm text-slate-600">
+                  Page {aggregatePagination.page} /{" "}
+                  {Math.max(1, aggregatePagination.total_pages)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={!aggregatePagination.has_next || loading}
+                  className="px-3 py-1.5 border border-slate-200 rounded-lg text-sm disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

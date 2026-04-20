@@ -1,6 +1,10 @@
 import { create } from "zustand";
 import axios from "../utils/axiosConfig";
 import { toast } from "react-toastify";
+import {
+  buildQueryParams,
+  normalizePaginatedResponse,
+} from "../utils/pagination";
 
 export const useVisitorStore = create((set, get) => ({
   isFormVisible: false,
@@ -14,6 +18,8 @@ export const useVisitorStore = create((set, get) => ({
   },
   visitors: [],
   visitorHistory: [],
+  visitorHistoryPagination: null,
+  lastHistoryQuery: { page: 1, page_size: 10 },
   loading: false,
   error: "",
   searchTerm: "",
@@ -46,20 +52,32 @@ export const useVisitorStore = create((set, get) => ({
     }
   },
 
-  fetchVisitorHistory: async () => {
+  fetchVisitorHistory: async (params = {}) => {
     set({ loading: true });
-    const { historyStatusFilter } = get();
     try {
-      const params = new URLSearchParams();
-      if (historyStatusFilter) params.append("status", historyStatusFilter);
+      const { historyStatusFilter, searchTerm, lastHistoryQuery } = get();
+      const query = {
+        ...lastHistoryQuery,
+        status: historyStatusFilter || "",
+        search: searchTerm || "",
+        ...params,
+        paginated: true,
+      };
 
       const response = await axios.get(
-        `/api/v1/visitors/history/?${params.toString()}`,
+        `/api/v1/visitors/history/${buildQueryParams(query)}`,
         {
           headers: { Authorization: `Token ${localStorage.getItem("token")}` },
         },
       );
-      set({ visitorHistory: response.data, error: "" });
+
+      const normalized = normalizePaginatedResponse(response.data);
+      set({
+        visitorHistory: normalized.results,
+        visitorHistoryPagination: normalized.pagination,
+        lastHistoryQuery: query,
+        error: "",
+      });
     } catch (error) {
       set({ error: "Failed to fetch visitor history" });
     } finally {
@@ -158,17 +176,7 @@ export const useVisitorStore = create((set, get) => ({
   },
 
   getFilteredHistory: () => {
-    const { visitorHistory, searchTerm } = get();
-    return visitorHistory.filter(
-      (visitor) =>
-        (visitor.name &&
-          visitor.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        (visitor.phone_number &&
-          visitor.phone_number
-            .toLowerCase()
-            .includes(searchTerm.toLowerCase())) ||
-        (visitor.unit &&
-          visitor.unit.toLowerCase().includes(searchTerm.toLowerCase())),
-    );
+    const { visitorHistory } = get();
+    return visitorHistory;
   },
 }));

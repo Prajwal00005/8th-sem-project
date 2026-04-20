@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useVisitorStore } from "../../store/visitorStore";
 import { UserPlus, X } from "lucide-react";
 import { Input } from "../UI/input";
@@ -25,12 +25,27 @@ const VisitorSection = ({ userRole }) => {
     toggleShowHistory,
     getFilteredVisitors,
     getFilteredHistory,
+    visitorHistoryPagination,
   } = useVisitorStore();
+
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPageSize, setHistoryPageSize] = useState(10);
 
   useEffect(() => {
     fetchVisitors();
-    fetchVisitorHistory();
-  }, [fetchVisitors, fetchVisitorHistory]);
+  }, [fetchVisitors]);
+
+  useEffect(() => {
+    if (!showHistory) return;
+    fetchVisitorHistory({ page: historyPage, page_size: historyPageSize });
+  }, [
+    fetchVisitorHistory,
+    showHistory,
+    historyPage,
+    historyPageSize,
+    historyStatusFilter,
+    searchTerm,
+  ]);
 
   const filteredVisitors = getFilteredVisitors();
   const filteredHistory = getFilteredHistory();
@@ -86,7 +101,10 @@ const VisitorSection = ({ userRole }) => {
             <div className="flex-grow">
               <Input
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  if (showHistory) setHistoryPage(1);
+                }}
                 placeholder="Search visitors..."
                 className="text-base py-3"
               />
@@ -97,7 +115,7 @@ const VisitorSection = ({ userRole }) => {
                   value={historyStatusFilter}
                   onChange={(e) => {
                     setHistoryStatusFilter(e.target.value);
-                    fetchVisitorHistory();
+                    setHistoryPage(1);
                   }}
                   options={[
                     { value: "", label: "All" },
@@ -126,99 +144,143 @@ const VisitorSection = ({ userRole }) => {
             Loading {showHistory ? "history" : "visitors"}...
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {(showHistory ? filteredHistory : filteredVisitors).map(
-              (visitor) => (
-                <div
-                  key={visitor.id}
-                  className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6 hover:shadow-md transition-all duration-300"
-                >
-                  <div className="flex justify-between items-start mb-3">
-                    <h3 className="text-lg font-semibold text-[#2C3B2A] truncate">
-                      {visitor.name}
-                    </h3>
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm font-medium ${
-                        statusStyles[visitor.status]
-                      }`}
-                    >
-                      {visitor.status}
-                    </span>
-                  </div>
-                  <div className="space-y-2 text-[#5C7361] text-sm">
-                    <p>
-                      <span className="font-medium">Unit:</span> {visitor.unit}
-                    </p>
-                    <p>
-                      <span className="font-medium">Purpose:</span>{" "}
-                      {visitor.purpose}
-                    </p>
-                    <p>
-                      <span className="font-medium">Date:</span> {visitor.date}{" "}
-                      | <span className="font-medium">Time:</span>{" "}
-                      {visitor.expected_time}
-                    </p>
-                    {visitor.check_in_time && (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {(showHistory ? filteredHistory : filteredVisitors).map(
+                (visitor) => (
+                  <div
+                    key={visitor.id}
+                    className="bg-white rounded-xl shadow-sm border border-[#E8EFEA] p-6 hover:shadow-md transition-all duration-300"
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <h3 className="text-lg font-semibold text-[#2C3B2A] truncate">
+                        {visitor.name}
+                      </h3>
+                      <span
+                        className={`px-3 py-1 rounded-full text-sm font-medium ${
+                          statusStyles[visitor.status]
+                        }`}
+                      >
+                        {visitor.status}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2 text-sm text-[#5C7361]">
+                      {visitor.purpose && (
+                        <p>
+                          <span className="font-medium">Purpose:</span>{" "}
+                          {visitor.purpose}
+                        </p>
+                      )}
                       <p>
-                        <span className="font-medium">Checked In:</span>{" "}
-                        {new Date(visitor.check_in_time).toLocaleString()}
+                        <span className="font-medium">Date:</span>{" "}
+                        {visitor.date} |{" "}
+                        <span className="font-medium">Time:</span>{" "}
+                        {visitor.expected_time}
                       </p>
-                    )}
-                    {visitor.check_out_time && (
-                      <p>
-                        <span className="font-medium">Checked Out:</span>{" "}
-                        {new Date(visitor.check_out_time).toLocaleString()}
-                      </p>
-                    )}
-                  </div>
-                  {userRole === "security" &&
-                    !showHistory &&
-                    (visitor.status === "pending" ||
-                      visitor.status === "checked-in") && (
-                      <div className="mt-4 flex gap-3">
-                        {visitor.status === "pending" && (
-                          <>
+                      {visitor.check_in_time && (
+                        <p>
+                          <span className="font-medium">Checked In:</span>{" "}
+                          {new Date(visitor.check_in_time).toLocaleString()}
+                        </p>
+                      )}
+                      {visitor.check_out_time && (
+                        <p>
+                          <span className="font-medium">Checked Out:</span>{" "}
+                          {new Date(visitor.check_out_time).toLocaleString()}
+                        </p>
+                      )}
+                    </div>
+
+                    {userRole === "security" &&
+                      !showHistory &&
+                      (visitor.status === "pending" ||
+                        visitor.status === "checked-in") && (
+                        <div className="mt-4 flex gap-3">
+                          {visitor.status === "pending" && (
+                            <>
+                              <Button
+                                onClick={() =>
+                                  handleVisitorAction(visitor.id, "checked-in")
+                                }
+                                className="bg-[#395917] hover:bg-[#2C3B2A] text-white px-4 py-2 text-sm rounded-lg"
+                              >
+                                Check In
+                              </Button>
+                              <Button
+                                onClick={() =>
+                                  handleVisitorAction(visitor.id, "rejected")
+                                }
+                                variant="danger"
+                                className="px-4 py-2 text-sm rounded-lg"
+                              >
+                                Reject
+                              </Button>
+                            </>
+                          )}
+                          {visitor.status === "checked-in" && (
                             <Button
                               onClick={() =>
-                                handleVisitorAction(visitor.id, "checked-in")
+                                handleVisitorAction(visitor.id, "checked-out")
                               }
                               className="bg-[#395917] hover:bg-[#2C3B2A] text-white px-4 py-2 text-sm rounded-lg"
                             >
-                              Check In
+                              Check Out
                             </Button>
-                            <Button
-                              onClick={() =>
-                                handleVisitorAction(visitor.id, "rejected")
-                              }
-                              variant="danger"
-                              className="px-4 py-2 text-sm rounded-lg"
-                            >
-                              Reject
-                            </Button>
-                          </>
-                        )}
-                        {visitor.status === "checked-in" && (
-                          <Button
-                            onClick={() =>
-                              handleVisitorAction(visitor.id, "checked-out")
-                            }
-                            className="bg-[#395917] hover:bg-[#2C3B2A] text-white px-4 py-2 text-sm rounded-lg"
-                          >
-                            Check Out
-                          </Button>
-                        )}
-                      </div>
-                    )}
+                          )}
+                        </div>
+                      )}
+                  </div>
+                ),
+              )}
+              {(showHistory ? filteredHistory : filteredVisitors).length ===
+                0 && (
+                <div className="col-span-full text-center p-8 text-[#5C7361] text-lg">
+                  No {showHistory ? "visitor history" : "visitors"} found
                 </div>
-              ),
-            )}
-            {(showHistory ? filteredHistory : filteredVisitors).length ===
-              0 && (
-              <div className="col-span-full text-center p-8 text-[#5C7361] text-lg">
-                No {showHistory ? "visitor history" : "visitors"} found
+              )}
+            </div>
+
+            {showHistory && visitorHistoryPagination && (
+              <div className="flex items-center justify-end gap-2 mt-4">
+                <label className="text-sm text-[#5C7361]">Page size</label>
+                <select
+                  value={historyPageSize}
+                  onChange={(e) => {
+                    setHistoryPageSize(parseInt(e.target.value, 10));
+                    setHistoryPage(1);
+                  }}
+                  className="bg-white border border-[#E8EFEA] text-[#2C3B2A] px-2 py-1 rounded-lg text-sm"
+                >
+                  <option value={10}>10</option>
+                  <option value={15}>15</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                </select>
+
+                <button
+                  type="button"
+                  onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                  disabled={!visitorHistoryPagination.has_previous || loading}
+                  className="px-3 py-1 rounded-lg text-sm border border-[#E8EFEA] bg-white disabled:opacity-50"
+                >
+                  Prev
+                </button>
+                <span className="text-sm text-[#5C7361]">
+                  Page {visitorHistoryPagination.page} /{" "}
+                  {Math.max(1, visitorHistoryPagination.total_pages)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setHistoryPage((p) => p + 1)}
+                  disabled={!visitorHistoryPagination.has_next || loading}
+                  className="px-3 py-1 rounded-lg text-sm border border-[#E8EFEA] bg-white disabled:opacity-50"
+                >
+                  Next
+                </button>
               </div>
             )}
-          </div>
+          </>
         )}
 
         {/* Form Modal */}

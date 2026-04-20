@@ -5,6 +5,7 @@ const SecurityVisitorRegister = () => {
   const {
     visitors,
     visitorHistory,
+    visitorHistoryPagination,
     fetchVisitors,
     fetchVisitorHistory,
     visitorData,
@@ -20,26 +21,43 @@ const SecurityVisitorRegister = () => {
     showHistory,
     toggleShowHistory,
     getFilteredVisitors,
-    getFilteredHistory,
   } = useVisitorStore();
 
   const [dateFilter, setDateFilter] = useState("");
   const [showModal, setShowModal] = useState(false);
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyPageSize, setHistoryPageSize] = useState(10);
 
   useEffect(() => {
     fetchVisitors();
-    fetchVisitorHistory();
-  }, [fetchVisitors, fetchVisitorHistory]);
+  }, [fetchVisitors]);
+
+  useEffect(() => {
+    if (!showHistory) return;
+    fetchVisitorHistory({
+      page: historyPage,
+      page_size: historyPageSize,
+      start_date: dateFilter || "",
+      end_date: dateFilter || "",
+    });
+  }, [
+    fetchVisitorHistory,
+    showHistory,
+    historyPage,
+    historyPageSize,
+    historyStatusFilter,
+    searchTerm,
+    dateFilter,
+  ]);
 
   const baseCurrent = getFilteredVisitors();
-  const baseHistory = getFilteredHistory();
 
-  const filteredVisitors = (!showHistory ? baseCurrent : baseHistory).filter(
-    (visitor) => {
-      if (!dateFilter) return true;
-      return visitor.date && visitor.date.startsWith(dateFilter);
-    },
-  );
+  const filteredVisitors = !showHistory
+    ? baseCurrent.filter((visitor) => {
+        if (!dateFilter) return true;
+        return visitor.date && visitor.date.startsWith(dateFilter);
+      })
+    : visitorHistory;
 
   return (
     // <div className="p-6 md:p-8 bg-gray-50 min-h-screen">
@@ -221,7 +239,10 @@ const SecurityVisitorRegister = () => {
             type="text"
             placeholder="Search by name, phone or unit"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              if (showHistory) setHistoryPage(1);
+            }}
             className="w-full md:w-64 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         </div>
@@ -230,7 +251,10 @@ const SecurityVisitorRegister = () => {
           <input
             type="date"
             value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
+            onChange={(e) => {
+              setDateFilter(e.target.value);
+              if (showHistory) setHistoryPage(1);
+            }}
             className="border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           {showHistory && (
@@ -238,7 +262,7 @@ const SecurityVisitorRegister = () => {
               value={historyStatusFilter}
               onChange={(e) => {
                 setHistoryStatusFilter(e.target.value);
-                fetchVisitorHistory();
+                setHistoryPage(1);
               }}
               className="border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
@@ -370,6 +394,46 @@ const SecurityVisitorRegister = () => {
             )}
           </tbody>
         </table>
+
+        {showHistory && visitorHistoryPagination && (
+          <div className="flex items-center justify-end gap-2 p-3 border-t bg-gray-50">
+            <label className="text-sm text-gray-700">Page size</label>
+            <select
+              value={historyPageSize}
+              onChange={(e) => {
+                setHistoryPageSize(parseInt(e.target.value, 10));
+                setHistoryPage(1);
+              }}
+              className="border rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value={10}>10</option>
+              <option value={15}>15</option>
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+            </select>
+
+            <button
+              type="button"
+              onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+              disabled={!visitorHistoryPagination.has_previous || loading}
+              className="px-3 py-1 border rounded-md text-sm disabled:opacity-50"
+            >
+              Prev
+            </button>
+            <span className="text-sm text-gray-700">
+              Page {visitorHistoryPagination.page} /{" "}
+              {Math.max(1, visitorHistoryPagination.total_pages)}
+            </span>
+            <button
+              type="button"
+              onClick={() => setHistoryPage((p) => p + 1)}
+              disabled={!visitorHistoryPagination.has_next || loading}
+              className="px-3 py-1 border rounded-md text-sm disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
     </div>
     // </div>

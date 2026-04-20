@@ -5,7 +5,9 @@ const SecurityBillManagement = () => {
   const {
     rooms,
     bills,
+    billsPagination,
     aggregateBills,
+    aggregatePagination,
     loading,
     error,
     billForm,
@@ -37,12 +39,38 @@ const SecurityBillManagement = () => {
   const [searchName, setSearchName] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [viewType, setViewType] = useState("resident"); // 'resident' | 'adminExpense'
+  const [residentPage, setResidentPage] = useState(1);
+  const [residentPageSize, setResidentPageSize] = useState(10);
+  const [aggregatePage, setAggregatePage] = useState(1);
+  const [aggregatePageSize, setAggregatePageSize] = useState(10);
 
   useEffect(() => {
     fetchRooms();
-    fetchBills();
-    fetchAggregateBills();
-  }, [fetchRooms, fetchBills, fetchAggregateBills]);
+  }, [fetchRooms]);
+
+  useEffect(() => {
+    if (viewType !== "resident") return;
+    fetchBills({
+      page: residentPage,
+      page_size: residentPageSize,
+      status: statusFilter === "all" ? "" : statusFilter,
+      search_room: searchRoom,
+      search_name: searchName,
+    });
+  }, [
+    fetchBills,
+    residentPage,
+    residentPageSize,
+    searchRoom,
+    searchName,
+    statusFilter,
+    viewType,
+  ]);
+
+  useEffect(() => {
+    if (viewType !== "adminExpense") return;
+    fetchAggregateBills({ page: aggregatePage, page_size: aggregatePageSize });
+  }, [fetchAggregateBills, aggregatePage, aggregatePageSize, viewType]);
 
   const handleOpenCreate = () => {
     resetBillForm();
@@ -78,20 +106,9 @@ const SecurityBillManagement = () => {
     }, 0);
   };
 
-  const filteredBills = bills.filter((bill) => {
-    const roomMatch = bill.room_number
-      ?.toString()
-      .toLowerCase()
-      .includes(searchRoom.toLowerCase());
-    const nameMatch = bill.resident_name
-      ?.toString()
-      .toLowerCase()
-      .includes(searchName.toLowerCase());
-
-    const statusMatch =
-      statusFilter === "all" || bill.payment_status === statusFilter;
-    return roomMatch && nameMatch && statusMatch;
-  });
+  const totalResidentRecords = billsPagination?.total ?? bills.length;
+  const totalAggregateRecords =
+    aggregatePagination?.total ?? aggregateBills.length;
 
   return (
     // <div className="p-6 md:p-8 bg-gray-50 min-h-screen">
@@ -126,19 +143,28 @@ const SecurityBillManagement = () => {
                   type="text"
                   placeholder="Search by room"
                   value={searchRoom}
-                  onChange={(e) => setSearchRoom(e.target.value)}
+                  onChange={(e) => {
+                    setSearchRoom(e.target.value);
+                    setResidentPage(1);
+                  }}
                   className="w-full md:w-40 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <input
                   type="text"
                   placeholder="Search by name"
                   value={searchName}
-                  onChange={(e) => setSearchName(e.target.value)}
+                  onChange={(e) => {
+                    setSearchName(e.target.value);
+                    setResidentPage(1);
+                  }}
                   className="w-full md:w-48 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
                 <select
                   value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setResidentPage(1);
+                  }}
                   className="w-full md:w-40 border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="all">All status</option>
@@ -205,7 +231,7 @@ const SecurityBillManagement = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 bg-white">
-                {filteredBills.length === 0 ? (
+                {bills.length === 0 ? (
                   <tr>
                     <td
                       className="px-4 py-4 text-center text-gray-500 text-sm"
@@ -215,7 +241,7 @@ const SecurityBillManagement = () => {
                     </td>
                   </tr>
                 ) : (
-                  filteredBills.map((bill) => (
+                  bills.map((bill) => (
                     <tr key={bill.id}>
                       <td className="px-4 py-2 text-gray-800">
                         {bill.room_number}
@@ -265,6 +291,46 @@ const SecurityBillManagement = () => {
                 )}
               </tbody>
             </table>
+
+            {billsPagination && (
+              <div className="flex items-center justify-end gap-2 p-3 border-t bg-gray-50">
+                <label className="text-sm text-gray-700">Page size</label>
+                <select
+                  value={residentPageSize}
+                  onChange={(e) => {
+                    setResidentPageSize(parseInt(e.target.value, 10));
+                    setResidentPage(1);
+                  }}
+                  className="border rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value={10}>10</option>
+                  <option value={15}>15</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                </select>
+
+                <button
+                  type="button"
+                  onClick={() => setResidentPage((p) => Math.max(1, p - 1))}
+                  disabled={!billsPagination.has_previous || loading}
+                  className="px-3 py-1 border rounded-md text-sm disabled:opacity-50"
+                >
+                  Prev
+                </button>
+                <span className="text-sm text-gray-700">
+                  Page {billsPagination.page} /{" "}
+                  {Math.max(1, billsPagination.total_pages)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setResidentPage((p) => p + 1)}
+                  disabled={!billsPagination.has_next || loading}
+                  className="px-3 py-1 border rounded-md text-sm disabled:opacity-50"
+                >
+                  Next
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -273,6 +339,10 @@ const SecurityBillManagement = () => {
             <h3 className="text-lg font-semibold text-gray-800 mb-2">
               Admin Expense Bills
             </h3>
+            <p className="text-xs text-gray-500 mb-2">
+              {totalAggregateRecords} record
+              {totalAggregateRecords !== 1 ? "s" : ""} found
+            </p>
             <div className="overflow-x-auto border rounded-lg mb-4">
               <table className="min-w-full divide-y divide-gray-200 text-sm">
                 <thead className="bg-gray-100">
@@ -329,6 +399,46 @@ const SecurityBillManagement = () => {
                     ))}
                 </tbody>
               </table>
+
+              {aggregatePagination && (
+                <div className="flex items-center justify-end gap-2 p-3 border-t bg-gray-50">
+                  <label className="text-sm text-gray-700">Page size</label>
+                  <select
+                    value={aggregatePageSize}
+                    onChange={(e) => {
+                      setAggregatePageSize(parseInt(e.target.value, 10));
+                      setAggregatePage(1);
+                    }}
+                    className="border rounded-md px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value={10}>10</option>
+                    <option value={15}>15</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                  </select>
+
+                  <button
+                    type="button"
+                    onClick={() => setAggregatePage((p) => Math.max(1, p - 1))}
+                    disabled={!aggregatePagination.has_previous || loading}
+                    className="px-3 py-1 border rounded-md text-sm disabled:opacity-50"
+                  >
+                    Prev
+                  </button>
+                  <span className="text-sm text-gray-700">
+                    Page {aggregatePagination.page} /{" "}
+                    {Math.max(1, aggregatePagination.total_pages)}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setAggregatePage((p) => p + 1)}
+                    disabled={!aggregatePagination.has_next || loading}
+                    className="px-3 py-1 border rounded-md text-sm disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -1,10 +1,18 @@
 import { create } from "zustand";
 import api from "../utils/axiosConfig";
+import {
+  buildQueryParams,
+  normalizePaginatedResponse,
+} from "../utils/pagination";
 
 export const useSecurityBillStore = create((set, get) => ({
   rooms: [],
   bills: [],
+  billsPagination: null,
+  lastBillsQuery: { page: 1, page_size: 10 },
   aggregateBills: [],
+  aggregatePagination: null,
+  lastAggregateQuery: { page: 1, page_size: 10 },
   loading: false,
   error: "",
   editingBill: null,
@@ -127,22 +135,48 @@ export const useSecurityBillStore = create((set, get) => ({
     }
   },
 
-  fetchBills: async () => {
+  fetchBills: async (params = {}) => {
     set({ loading: true, error: "" });
     try {
-      const res = await api.get("/api/v1/bills/security/");
-      set({ bills: res.data, loading: false });
+      const query = {
+        ...get().lastBillsQuery,
+        ...params,
+        paginated: true,
+      };
+      const res = await api.get(
+        `/api/v1/bills/security/${buildQueryParams(query)}`,
+      );
+      const normalized = normalizePaginatedResponse(res.data);
+      set({
+        bills: normalized.results,
+        billsPagination: normalized.pagination,
+        lastBillsQuery: query,
+        loading: false,
+      });
     } catch (err) {
       console.error("Failed to fetch bills", err);
       set({ error: "Failed to fetch bills", loading: false });
     }
   },
 
-  fetchAggregateBills: async () => {
+  fetchAggregateBills: async (params = {}) => {
     set({ loading: true, error: "" });
     try {
-      const res = await api.get("/api/v1/bills/security/aggregate/");
-      set({ aggregateBills: res.data, loading: false });
+      const query = {
+        ...get().lastAggregateQuery,
+        ...params,
+        paginated: true,
+      };
+      const res = await api.get(
+        `/api/v1/bills/security/aggregate/${buildQueryParams(query)}`,
+      );
+      const normalized = normalizePaginatedResponse(res.data);
+      set({
+        aggregateBills: normalized.results,
+        aggregatePagination: normalized.pagination,
+        lastAggregateQuery: query,
+        loading: false,
+      });
     } catch (err) {
       console.error("Failed to fetch aggregate bills", err);
       set({ error: "Failed to fetch aggregate bills", loading: false });
@@ -184,7 +218,7 @@ export const useSecurityBillStore = create((set, get) => ({
         await api.post("/api/v1/bills/security/", payload);
       }
 
-      await get().fetchBills();
+      await get().fetchBills(get().lastBillsQuery);
       get().resetBillForm();
       set({ loading: false });
       return true;
@@ -224,7 +258,7 @@ export const useSecurityBillStore = create((set, get) => ({
 
       await api.post("/api/v1/bills/security/aggregate/", payload);
 
-      await get().fetchAggregateBills();
+      await get().fetchAggregateBills(get().lastAggregateQuery);
       get().resetBillForm();
       set({ loading: false });
       return true;
@@ -256,7 +290,7 @@ export const useSecurityBillStore = create((set, get) => ({
     set({ loading: true, error: "" });
     try {
       await api.delete(`/api/v1/bills/security/${billId}/`);
-      await get().fetchBills();
+      await get().fetchBills(get().lastBillsQuery);
       set({ loading: false });
     } catch (err) {
       console.error("Failed to delete bill", err);
